@@ -1,0 +1,417 @@
+---
+title: "Tarea 3. Algunos ejercicios"
+format: html
+editor: visual
+---
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+
+library(tidyverse)
+```
+
+```{r}
+#| code-fold: true
+
+calcular_bayes_2 <- function(prior, likelihood_pos, likelihood_neg) {
+  evidence <- likelihood_pos * prior + likelihood_neg * (1 - prior)
+  posterior <- (likelihood_pos * prior) / evidence
+  return(list(
+    evidence = evidence,
+    posterior = posterior,
+    improvement = posterior - prior
+  ))
+}
+```
+
+# Ejercicio 3
+
+Factories A and B produce computers. Factory A produces 2 times as many computers as factory B. The probability that an item produced by factory A is defective is 0.015 and the probability that an item produced by factory B is defective is 0.027. A computer is selected at random and it is found to be defective. What is the probability it came from factory A?
+
+## Datos:
+
+-   $P(A)=2/3$
+-   $P(B)=1/3$
+-   $P(D|A)=0.015$
+-   $P(D|B)=0.027$
+
+```{r}
+#| code-fold: true
+
+prob_A <- 3/4
+prob_B <- 1/4
+prob_D_A <- 0.033
+prob_D_B <- 0.048
+ 
+ejercicio_3 <- calcular_bayes_2(prob_A, prob_D_A, prob_D_B)
+
+cat("La probabilidad de que se haya producido en la fábrica A dado que fue defectuoso es",  ejercicio_3$posterior)
+```
+
+# Ejercicio 4
+
+It is estimated that approximately 8.24% Americans are afflicted with diabetes. Suppose that a certain diagnostic evaluation for diabetes will correctly diagnose 96% of all adults over 40 with diabetes as having the disease and incorrectly diagnoses 2% of all adults over 40 without diabetes as having the disease.
+
+## Datos:
+
+-   $P(D)=0.0824$
+-   $P(T+|D)=0.96$
+-   $P(T+|¬D)=0.02$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+prev <- 0.0824
+sens <- 0.96
+fpr <- 0.02
+
+# Función para calcular probabilidades en problemas de diagnóstico
+calcular_diagnostico <- function(prev, sens, fpr) {
+  # prev: prevalencia (P(D))
+  # sens: sensibilidad (P(T+|D))
+  # fpr: falsa tasa positiva (P(T+|¬D))
+  
+  prob_no_D <- 1 - prev
+  especificidad <- 1 - fpr  # P(T-|¬D)
+  
+  # a) Falso positivo: P(¬D ∩ T+)
+  falso_positivo <- prob_no_D * fpr
+  
+  # b) Probabilidad de diagnóstico negativo: P(T-)
+  prob_negativo <- prev * (1 - sens) + prob_no_D * especificidad
+  
+  # c) Falso negativo: P(D|T-)
+  falso_negativo <- (prev * (1 - sens)) / prob_negativo
+  
+  return(list(
+    falso_positivo = falso_positivo,
+    prob_negativo = prob_negativo,
+    falso_negativo = falso_negativo
+  ))
+}
+
+# Calcular
+resultados <- calcular_diagnostico(prev, sens, fpr)
+
+# Mostrar resultados
+cat("a) Probabilidad de falso positivo: ", resultados$falso_positivo, "\n")
+cat("b) Probabilidad de ser diagnosticado como no diabetes: ", resultados$prob_negativo, "\n")
+cat("c) Probabilidad de tener diabetes dado diagnóstico negativo (falso negativo): ", resultados$falso_negativo, "\n")
+```
+
+# Ejercicio 5
+
+In a random sample of 1,000 people, it is found that 6.2% have a liver ailment. Of those who have a liver ailment, 9% are heavy drinkers, 50% are moderate drinkers, and 41% are nondrinkers. Of those who do not have a liver ailment, 9% are heavy drinkers, 43% are moderate drinkers, and 48% are nondrinkers.
+
+If a person is chosen at random, and he or she is a heavy drinker, what is the empirical probability of that person having a liver ailment?
+
+## Datos:
+
+-   $P(E)=0.3$
+-   $P(H|E)=0.09$
+-   $P(H|¬E)=0.09$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+prob_enfermedad <- 0.062
+prob_bebedor_fuerte_enfermo <- 0.09
+prob_bebedor_fuerte_sano <- 0.09
+
+# Calcular P(E|H) usando Bayes
+resultado <- calcular_bayes_2(prob_enfermedad, prob_bebedor_fuerte_enfermo, prob_bebedor_fuerte_sano)
+
+# Mostrar resultado
+cat("La probabilidad empírica de que una persona tenga una enfermedad hepática dado que es bebedor fuerte es:", resultado$posterior, "\n")
+```
+
+# Ejercicio 6
+
+A biomedical research company produces 47% of its insulin at a plant in Kansas City, and the remainder is produced at a plant in Jefferson City. Quality control has shown that 0.6% of the insulin produced at the plant in Kansas City is defective, while 0.8% of the insulin produced at the plant in Jefferson City is defective. What is the probability that a randomly chosen unit of insulin came from the plant in Jefferson City given that it is defective?
+
+## Datos:
+
+-   $P(J)=0.53$
+-   $P(D|J)=0.008$
+-   $P(D|K)=0.006$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+prob_jefferson <- 0.53  # 100% - 47%
+prob_defecto_jefferson <- 0.008  # 0.8%
+prob_defecto_kansas <- 0.006  # 0.6%
+
+# Calcular P(Jefferson|Defectuoso) usando Bayes
+resultado <- calcular_bayes_2(prob_jefferson, prob_defecto_jefferson, prob_defecto_kansas)
+
+cat("La probabilidad de que venga de Jefferson City dado que es defectuoso es:", resultado$posterior)
+```
+
+# Ejercicio 7
+
+Three airlines serve a small town in Ohio. Airline A has 49% of all scheduled flights, airline B has 34% and airline C has the remaining 17%. Their on-time rates are 76%, 69%, and 41%, respectively. A flight just left on-time. What is the probability that it was a flight of airline A?
+
+## Datos:
+
+-   $P(A)=0.49$
+-   $P(B)=0.34$
+-   $P(C)=0.17$
+-   $P(T|A)=0.76$
+-   $P(T|B)=0.69$
+-   $P(T|C)=0.41$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+prob_A <- 0.49
+prob_B <- 0.34
+prob_C <- 0.17
+prob_ontime_A <- 0.76
+prob_ontime_B <- 0.69
+prob_ontime_C <- 0.41
+
+# Calcular la probabilidad total de que un vuelo sea a tiempo
+prob_ontime_total <- prob_ontime_A * prob_A + prob_ontime_B * prob_B + prob_ontime_C * prob_C
+
+# Calcular P(A|T) usando Bayes
+prob_A_dado_ontime <- (prob_ontime_A * prob_A) / prob_ontime_total
+
+cat("La probabilidad de que sea de la aerolínea A dado que salió a tiempo es:", prob_A_dado_ontime)
+```
+
+# Ejercicio 8
+
+Bad gums may mean a bad heart. Researchers discovered that 84% of people who have suffered a heart attack had periodontal disease, an inflammation of the gums. Only 32% of healthy people have this disease. Suppose that in a certain community heart attacks are quite rare, occurring with only 11% probability. 
+
+A. If someone has periodontal disease, what is the probability that he or she will have a heart attack? 
+
+B. If 43% of the people in a community will have a heart attack, what is the probability that a person with periodontal disease will have a heart attack? 
+
+## Datos:
+
+-   $P(E|A)=0.84$
+-   $P(E|S)=0.32$
+-   $P(A)=0.11$
+-   $P(A)=043=$ Para la parte B
+
+```{r}
+#| code-fold: true
+
+# Parte A
+prob_ataque_A <- 0.11
+prob_enfer_period_ataque <- 0.84
+prob_enfer_period_sano <- 0.32
+
+resultado_A <- calcular_bayes_2(prob_ataque_A, prob_enfer_period_ataque, prob_enfer_period_sano)
+
+# Parte B
+prob_ataque_B <- 0.43
+resultado_B <- calcular_bayes_2(prob_ataque_B, prob_enfer_period_ataque, prob_enfer_period_sano)
+
+cat("A. Probabilidad de ataque al corazón dado enfermedad periodontal:", resultado_A$posterior, "\n")
+cat("B. Probabilidad de ataque al corazón dado enfermedad periodontal:", resultado_B$posterior)
+```
+
+# Ejercicio 9
+
+Transplant operations have become routine. One common transplant operation is for kidneys. The most dangerous aspect of the procedure is the possibility that the body may reject the new organ. There are several new drugs available for such circumstances and the earlier the drug is administered, the higher the probability of averting rejection. The New England Journal of Medicine recently reported the development of a new urine test to detect early warning signs that the body is rejecting a transplanted kidney. However, like most other tests, the new test is not perfect. In fact, 20% of negative tests and 5% of positive tests prove to be incorrect. Physicians know that in about 31% of kidney transplants the body tries to reject the organ. If the new test has a positive result (indicating early warning of rejection), what is the probability that the body is attempting to reject the kidney?
+
+## Datos:
+
+-   $P(r)=0.3$
+-   $P(pr)=0.8$
+-   $P(nr)=0.1$
+
+```{r}
+#| code-fold: true
+
+# prior probabilidad rechazo
+prob_rechazo <- 0.31
+# likelihood_pos
+prob_pos_rechazo <- 0.8
+# likelihood_neg
+prob_pos_norechazo <- 0.05
+
+
+ejercicio_9 <- calcular_bayes_2(prob_rechazo, prob_pos_rechazo, prob_pos_norechazo)
+
+cat("La probalidad de que se rechace dado que la prueba fue positiva es:",  ejercicio_9$posterior)
+```
+
+# Ejercicio 11
+
+All that is left in a packet of candy are 7 reds, 3 greens, and 2 blues.
+
+(a)What is the probability that a random drawing yields a green followed by a green assuming that the first candy drawn is put back into the packet?
+
+(b)Are the events 'green' and 'green' dependent?
+
+## Datos:
+
+-   $P(rojos)=7$
+-   $P(verdes)=3$
+-   $P(azules)=2$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+rojos <- 7
+verdes <- 3
+azules <- 2
+total <- rojos + verdes + azules
+
+# Probabilidad de verde en un intento
+prob_verde <- verdes / total
+
+# (a) Probabilidad de verde seguido de verde (con reemplazo)
+prob_verde_y_verde <- prob_verde * prob_verde
+
+# (b) Los eventos son independientes porque hay reemplazo
+# La probabilidad del segundo evento no se ve afectada por el primero
+
+cat("(a) Probabilidad de verde seguido de verde (con reemplazo):", prob_verde_y_verde, "\n")
+cat("(b) ¿Son dependientes los eventos? No, porque hay reemplazo\n")
+cat("    P(G2|G1) =", prob_verde, "= P(G2) → Eventos independientes")
+```
+
+# Ejercicio 12
+
+if $P(E∩F)=0.27$, $P(E|F)=0.36$, and $P(F|E)=0.6$
+
+## Datos:
+
+-   $P(E∩F)=0.27$
+-   $P(E|F)=0.36$
+-   $P(F|E)=0.6$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+P_E_int_F <- 0.27
+P_E_dado_F <- 0.36
+P_F_dado_E <- 0.60
+
+# (a) P(E) = P(E ∩ F) / P(F|E)
+P_E <- P_E_int_F / P_F_dado_E
+
+# (b) P(F) = P(E ∩ F) / P(E|F)
+P_F <- P_E_int_F / P_E_dado_F
+
+# (c) P(E ∪ F) = P(E) + P(F) - P(E ∩ F)
+P_E_union_F <- P_E + P_F - P_E_int_F
+
+# (d) ¿Son independientes? Comprobamos si P(E ∩ F) = P(E) * P(F)
+independientes <- abs(P_E_int_F - (P_E * P_F)) < 1e-10  # Comparación con tolerancia
+
+cat("(a) P(E) =", P_E, "\n")
+cat("(b) P(F) =", P_F, "\n")
+cat("(c) P(E ∪ F) =", P_E_union_F, "\n")
+cat("(d) ¿Son independientes?", ifelse(independientes, "yes", "no"), "\n")
+```
+
+# Ejercicio 14
+
+For two events $A$ and $B$, $P(A)=0.2$ and $P(B)=0.4$
+
+## Datos:
+
+-   $P(A)=0.2$
+-   $P(B)=0.4$
+
+```{r}
+#| code-fold: true
+
+# Datos del problema
+P_A <- 0.2
+P_B <- 0.4
+
+# (a) Si A y B son independientes
+P_A_int_B_ind <- P_A * P_B
+P_A_dado_B_ind <- P_A_int_B_ind / P_B
+P_A_union_B_ind <- P_A + P_B - P_A_int_B_ind
+
+# (b) Si son dependientes y P(A|B) = 0.3
+P_A_dado_B_dep <- 0.3
+P_A_int_B_dep <- P_A_dado_B_dep * P_B
+P_B_dado_A_dep <- P_A_int_B_dep / P_A
+
+cat("(a) Si A y B son independientes:\n")
+cat("  P(A∩B) =", P_A_int_B_ind, "\n")
+cat("  P(A|B) =", P_A_dado_B_ind, "\n")
+cat("  P(A∪B) =", P_A_union_B_ind, "\n\n")
+
+cat("(b) Si A y B son dependientes y P(A|B)=0.3:\n")
+cat("  P(A∩B) =", P_A_int_B_dep, "\n")
+cat("  P(B|A) =", P_B_dado_A_dep, "\n")
+```
+
+# Ejercicio 15
+
+Two fair dice, one blue and one red, are tossed, and the up face on each die is recorded. Define the following events: \
+E:{A 1 on the blue die}\
+F:{The sum of the numbers is even}
+
+```{r}
+#| code-fold: true
+
+# Total de resultados posibles
+total <- 36
+
+# (a) P(E): Probabilidad de un 1 en el dado azul
+# El dado azul tiene 6 caras, solo 1 es favorable (el 1)
+P_E <- 1/6
+
+# (b) P(F): Probabilidad de que la suma sea par
+# La suma es par si ambos dados son pares o ambos son impares.
+# Pares: 2,4,6 (3 caras); Impares: 1,3,5 (3 caras)
+# Casos favorables: (par,par) o (impar,impar) = (3*3) + (3*3) = 9 + 9 = 18
+P_F <- 18/36
+
+# (c) P(E∩F): Probabilidad de que salga 1 en el azul Y la suma sea par
+# Si el azul es 1 (impar), para que la suma sea par el rojo debe ser impar (1,3,5) → 3 casos
+# Casos favorables: 3
+P_E_int_F <- 3/36
+
+# ¿Son independientes? Comprobamos si P(E∩F) = P(E)*P(F)
+independientes <- abs(P_E_int_F - (P_E * P_F)) < 1e-10
+
+cat("(a) P(E) =", P_E, "\n")
+cat("(b) P(F) =", P_F, "\n")
+cat("(c) P(E∩F) =", P_E_int_F, "\n")
+cat("¿Son independientes?", ifelse(independientes, "yes", "no"), "\n")
+```
+
+# Ejercicio 16
+
+If $P(A)=0.1$, $P(B)=0.3$, and $P(A∪B)=0.4$.
+
+```{r}
+#| code-fold: true
+
+# Datos
+P_A <- 0.1
+P_B <- 0.3
+P_A_union_B <- 0.4
+
+# Calcular P(A∩B)
+P_A_int_B <- P_A + P_B - P_A_union_B
+
+# (a) ¿Son independientes?
+independientes <- abs(P_A_int_B - (P_A * P_B)) < 1e-10
+
+# (b) ¿Son mutuamente excluyentes?
+mutuamente_excluyentes <- abs(P_A_int_B) < 1e-10
+
+cat("P(A∩B) =", P_A_int_B, "\n")
+cat("(a) ¿Son independientes?", ifelse(independientes, "YES", "NO"), "\n")
+cat("(b) ¿Son mutuamente excluyentes?", ifelse(mutuamente_excluyentes, "YES", "NO"), "\n")
+```
