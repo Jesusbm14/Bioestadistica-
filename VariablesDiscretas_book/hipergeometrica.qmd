@@ -1,0 +1,146 @@
+---
+title: "Distribución Hipergeométrica"
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+```
+
+La distribución hipergeométrica modela la probabilidad de obtener un número específico de éxitos en una muestra finita extraída sin reemplazo de una población que contiene dos tipos de elementos.
+Es muy útil en problemas de muestreo, control de calidad y loterías, donde no se repone lo extraído.
+
+::: {#def-hipergeometrica}
+Sea una población finita de tamaño $N$, que contiene $K$ elementos de un primer tipo (éxitos) y $N-K$ elementos de un segundo tipo (fracasos).
+Si se extrae una muestra de tamaño $n$ sin reemplazo, y $X$ representa el número de elementos tipo 1 en la muestra, entonces:
+
+$$X \sim \text{Hipergeo}(N, K, n)$$
+
+La función de masa de probabilidad está dada por:
+
+$$
+f(x) = \frac{\binom{K}{x}\binom{N-K}{n-x}}{\binom{N}{n}} 
+\quad \text{para } x = 0, 1, 2, \ldots, n
+$$
+
+:::
+
+## Características de la Distribución Hipergeométrica
+
+**Parámetros: **
+
+-   $N$: tamaño de la población
+-   $K$: número de elementos del tipo 1 (éxitos)
+-   $n$: tamaño de la muestra
+
+**Parámetros Estadísticos: **
+
+**Esperanza:**
+$$
+E(X) = n \, \frac{K}{N}
+$$
+
+**Varianza:**
+$$
+\text{Var}(X) = n \, \frac{K}{N} \, \frac{N - K}{N} \, \frac{N - n}{N - 1}
+$$
+
+## Ejemplo Básico
+
+::: {#exm-hipergeom_1}
+Supongamos que tenemos una caja con $N = 20$ objetos, de los cuales $K = 7 $son del tipo 1 (buenos) y 13 del tipo 2 (defectuosos).
+Seleccionamos una muestra de $n = 5$ objetos sin reemplazo.
+Sea $X$ el número de objetos buenos en la muestra.
+
+```{r}
+N <- 20
+K <- 7
+n <- 5
+x <- 0:n
+
+# Probabilidades
+fx <- dhyper(x, K, N - K, n)
+
+# Tabla de resultados (nombre de columna limpio)
+tabla_hipergeo <- data.frame(
+  x = x,
+  Probabilidad = round(fx, 6)
+)
+
+kable(tabla_hipergeo, caption = "Distribución Hipergeométrica - Ejemplo (Rincón, 2014)") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+# Gráfico
+ggplot(tabla_hipergeo, aes(x = x, y = Probabilidad)) +
+  geom_col(fill = "skyblue", alpha = 0.8, width = 0.8) +
+  geom_text(aes(label = round(Probabilidad, 3)), vjust = -0.5, size = 3) +
+  labs(
+    title = "Distribución Hipergeométrica",
+    subtitle = "Ejemplo: N = 20, K = 7, n = 5",
+    x = "Número de éxitos (x)",
+    y = "P(X = x)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+
+```
+
+:::
+
+## Ejemplo practico
+
+En una urna hay 50 bolas, de las cuales 20 son rojas y 30 azules.
+Si se extraen 10 bolas sin reemplazo, ¿cuál es la probabilidad de obtener exactamente 4 rojas?
+Además, grafica la distribución completa de probabilidades.
+
+```{r}
+N <- 50
+K <- 20
+n <- 10
+x <- 0:n
+
+# Distribución de X
+fx <- dhyper(x, K, N - K, n)
+prob_4_rojas <- dhyper(4, K, N - K, n)
+
+cat("P(X = 4) =", round(prob_4_rojas, 5), "\n")
+
+tabla_urna <- data.frame(
+  x = x,
+  Probabilidad = round(fx, 6)
+)
+
+kable(tabla_urna, caption = "Distribución Hipergeométrica - Urna con bolas rojas y azules") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+# Gráfico
+ggplot(tabla_urna, aes(x = x, y = Probabilidad)) +
+  geom_col(fill = "orange", alpha = 0.8, width = 0.8) +
+  geom_point(data = tabla_urna[tabla_urna$x == 4, ], aes(x = x, y = Probabilidad),
+             color = "red", size = 3) +
+  geom_text(data = tabla_urna[tabla_urna$x == 4, ], 
+            aes(label = paste("P(4) =", round(Probabilidad, 4))), 
+            vjust = -0.8, color = "red", fontface = "bold") +
+  labs(title = "Distribución Hipergeométrica - Urna con bolas de colores",
+       subtitle = "Probabilidad de obtener exactamente 4 rojas",
+       x = "Número de bolas rojas (X)",
+       y = "P(X = x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+:::
