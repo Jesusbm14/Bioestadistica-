@@ -1,0 +1,193 @@
+---
+title: "weibull"
+lang: es
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(gridExtra)
+```
+
+::: {#def-hipergeometrica}
+La distribución Weibull es una distribución de probabilidad continua que se usa ampliamente en estudios de confiabilidad, durabilidad y tiempos de vida útil de componentes eléctricos, mecánicos o biológicos.
+Fue propuesta por el ingeniero Ernst Hjalmar Waloddi Weibull (1887–1979).
+
+Una variable aleatoria $X$ sigue una distribución Weibull si su función de densidad está dada por:
+
+$$
+f(x) =
+\begin{cases}
+\ell \, \omega (\ell x)^{\omega - 1} e^{-(\ell x)^{\omega}}, & x > 0, \\
+0, & \text{en otro caso.}
+\end{cases}
+$$
+
+Se denota como:
+
+$$
+X \sim \text{Weibull}(\omega, \ell)
+$$
+donde:
+
+-   $ω > 0$ es el parámetro de forma.
+-   $ℓ > 0$ es el parámetro de escala.
+
+:::
+
+## Función de distribución acumulada
+
+$$
+F(x) =
+\begin{cases}
+1 - e^{-(\ell x)^{\omega}}, & x > 0, \\
+0, & \text{en otro caso.}
+\end{cases}
+$$
+
+## Parámetros estadísticos
+
+$$
+E(X) = \frac{1}{\ell} \, \Gamma(1 + 1/\omega)
+$$
+$$
+\text{Var}(X) = \frac{1}{\ell^2} \, \left[ \Gamma(1 + 2/\omega) - \left(\Gamma(1 + 1/\omega)\right)^2 \right]
+$$
+
+donde $Γ(⋅)$ es la función gamma.
+
+## Ejemplo Básico
+
+::: {#exm-weibull_1}
+```{r}
+dweibull(2, shape = 2, scale = 3)   # evalúa la densidad f(x)
+pweibull(2, shape = 2, scale = 3)   # calcula P(X≤x)
+rweibull(10, shape = 2, scale = 3)  # genera valores aleatorios
+```
+:::
+
+## Ejemplo practico
+
+Supongamos que el tiempo de vida (en años) de un componente sigue una distribución Weibull con parámetros:
+
+$ω=2 y$ $ℓ=0.5$
+
+Queremos analizar la forma de la distribución.
+
+```{r}
+shape <- 2
+scale <- 0.5
+
+x <- seq(0, 5, by = 0.1)
+f_x <- dweibull(x, shape, scale)
+F_x <- pweibull(x, shape, scale)
+
+tabla_weibull <- data.frame(
+  x = round(x, 2),
+  f_x = round(f_x, 5),
+  F_x = round(F_x, 5)
+)
+
+kable(head(tabla_weibull, 10),
+      caption = "Distribución Weibull: ω = 2, ℓ = 0.5",
+      col.names = c("x", "f(x)", "F(x)")) |>
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+```
+
+```{r}
+parametros <- c(0.5, 1, 2, 5)
+x_vals <- seq(0, 5, by = 0.05)
+
+datos_graf <- expand.grid(x = x_vals, shape = parametros) |>
+  mutate(fx = dweibull(x, shape, scale = 1),
+         label = paste("ω =", shape))
+
+ggplot(datos_graf, aes(x = x, y = fx, color = label)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Distribución Weibull",
+       subtitle = "Efecto del parámetro de forma ω (ℓ = 1)",
+       x = "x",
+       y = "f(x)",
+       color = "Parámetro") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+## Ejercicio 1 – del libro
+
+::: {#exm-weibull_2}
+Supongamos que el tiempo de vida (en años) de un componente sigue una distribución Weibull con parámetros:
+
+$ω=2$ y $ℓ=0.5$
+
+Queremos analizar la forma de la distribución.
+
+```{r}
+x <- seq(0, 5, by = 0.1)
+weibull_exp <- dweibull(x, shape = 1, scale = 2)
+exponencial <- dexp(x, rate = 1/2)
+
+comparacion <- data.frame(
+  x = x,
+  Weibull = weibull_exp,
+  Exponencial = exponencial
+)
+
+ggplot(comparacion) +
+  geom_line(aes(x = x, y = Weibull, color = "Weibull (ω=1)")) +
+  geom_line(aes(x = x, y = Exponencial, color = "Exponencial")) +
+  labs(title = "Equivalencia entre Weibull(ω=1) y Exponencial",
+       x = "x", y = "f(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_manual(values = c("red", "blue"))
+```
+Cuando $ω=1$, la Weibull tiene la misma forma funcional que la distribución exponencial, comprobando la equivalencia teórica.
+
+:::
+
+## Ejercicio 2 – Aplicación práctica
+
+::: {#exm-weibull_3}
+Se sabe que el tiempo de vida (en años) de un motor eléctrico sigue una distribución Weibull con
+
+$ω=2.5$ y $ℓ=0.3$.
+
+Calcular la probabilidad de que dure más de 3 años.
+
+```{r}
+shape <- 2.5
+scale <- 0.3
+x <- 3
+
+prob_mayor_3 <- 1 - pweibull(x, shape, scale)
+cat("P(X > 3 años) =", round(prob_mayor_3, 4), "\n")
+```
+
+```{r}
+x_vals <- seq(0, 5, 0.01)
+fx <- dweibull(x_vals, shape, scale)
+
+ggplot(data.frame(x_vals, fx), aes(x = x_vals, y = fx)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_area(data = subset(data.frame(x_vals, fx), x_vals > 3),
+            aes(x = x_vals, y = fx), fill = "red", alpha = 0.4) +
+  labs(title = "Probabilidad P(X > 3 años)",
+       x = "x (años)",
+       y = "f(x)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+:::
