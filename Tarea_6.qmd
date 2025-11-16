@@ -1,0 +1,2174 @@
+---
+title: "Tarea 6. Estimación por el Método de Momentos"
+lang: es
+format:
+  html:
+    toc: false
+    theme: cosmo
+    code-fold: true
+    fig-width: 6
+    fig-height: 4
+    fontsize: 1.1rem
+    grid:
+      sidebar-width: 250px
+      body-width: 950px
+      margin-width: 250px
+      gutter-width: 1.5rem
+---
+
+```{=html}
+<style>
+main.content {
+text-align: justify}
+</style>
+```
+
+```{r}
+#| include: false
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(readxl)
+library(RColorBrewer)
+```
+
+```{r}
+#| include: false
+#| label: load-data
+# Cargar datos
+datos <- read_xlsx("Tarea_6.xlsx")
+head(datos)
+```
+
+
+Suponiendo dada una muestra aleatoria de tamaño $n$ para cada una de las siguientes distribuciones realiza lo siguiente:
+
+a) Encuentra el estimador para $\theta$ por el método de momentos.
+
+b) Verifica si es insesgado y/o asintóticamente insesgado.
+   
+   En este inciso será de utilidad recordar la esperanza de la media muestral:
+   
+$$E(\overline{X}) = E\left(\frac{1}{n}\sum_{i=1}^n X_i\right) = \frac{1}{n}\sum_{i=1}^n E(X_i) = \frac{1}{n} n E(X) = E(X).$$
+
+
+c) Calcula la varianza del estimador.
+
+   Es conveniente recordar algunas propiedades de la varianza que se enuncian en la siguiente proposición:
+
+::: {#prp-varianza}
+
+Sean $X$ y $Y$ dos variables aleatorias con varianza finita y sea $c$ una constante, entonces:
+
+1. $Var(c)=0$.
+2. $Var(cX) = c^2 Var(X)$.
+3. $Var(X+c) = Var(X)$.
+4. $Var(X) = E(X^2) - [E(X)]^2$.
+5. $Var(X+Y) = Var(X) + Var(Y) + 2Cov(X,Y)$, donde 
+$$Cov(X,Y) = E[(X - E(X))(Y - E(Y))]$$ 
+es la covarianza entre $X$ y $Y$. Si $X$ y $Y$ son independientes, entonces $Cov(X,Y) = 0$ y por lo tanto $Var(X+Y) = Var(X) + Var(Y)$.
+
+:::
+
+Además, dado que en una muestra aleatoria consideramos variables aleatorias independientes:
+
+$$Var{\overline{X}} = Var\left(\frac{1}{n}\sum_{i=1}^n X_i\right) = \frac{1}{n^2}Var\left(\sum_{i=1}^n X_i\right) = \frac{1}{n^2}\sum_{i=1}^n Var(X_i) = \frac{1}{n^2} n Var(X) = \frac{Var(X)}{n}.$$
+
+d) Calcula el error cuadrático medio (ECM).
+
+e) Elige un valor para $\theta$ y simula una muestra aleatoria de tamaño $n=1000$. Calcula el estimador y para los ejercicios 1 al 4 (distribuciones discretas): genera una muestra aleatoria de tamaño $n=1000$ utilizando el valor estimado del parámetro y compara ambos histogramas. Para los ejercicios 5 al 8 (distribuciones continuas): compara el histograma de los valores simulados con el valor real del parámetro y la función de densidad obtenida con el valor estimado del parámetro.
+
+f) Verifica la convergencia del estimador al aumentar el tamaño cada muestra. Grafica los valores del estimador en función del tamaño de la muestra (puede ser por medio de un boxplot).
+
+::: {#exr-discreta_1}
+
+Para $0 < \theta < 4$, consideramos la función de probabilidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\theta/4 & \text{si } x = 1, \\
+1 - \theta/4 & \text{si } x = 2, \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+
+::: {.panel-tabset}
+##  a) Estimador
+
+Para una distribución geométrica con función de probabilidad $f(x;\theta) = (1-\theta)^{x-1}\theta$ para $x = 1, 2, \ldots$, la esperanza es:
+
+$E(X)=1/\theta$
+
+Igualando con la media muestral:
+
+$\overline{X}=1/\theta \implies \hat\theta=1/X$
+
+##  b) Insesgamiento 
+
+Verificamos si es insesgado:
+
+$$E(\hat{\theta}) = E\left(\frac{1}{X}\right) \neq \frac{1}{E(X)} = \theta$$
+
+Por la desigualdad de Jensen, $E(1/\overline{X}) > 1/E(\overline{X})$, por lo tanto el estimador es sesgado.
+
+##  c) Varianza
+
+La varianza del estimador es difícil de calcular analíticamente debido a la no linealidad.
+
+##  d) ECM 
+
+El ECM incluye tanto la varianza como el sesgo al cuadrado.
+
+##  e) Simuluación
+
+```{r}
+x_geom <- datos$Geometrica
+theta_hat_geom <- 1 / mean(x_geom)
+
+cat("Estimación de θ:", round(theta_hat_geom, 4), "\n")
+
+# Función de probabilidad geométrica (para x = 0,1,2,...)
+dgeom_custom <- function(x, theta) {
+  theta * (1 - theta)^x
+}
+
+# Crear datos para el gráfico teórico
+valores_unicos <- as.numeric(names(table(datos$Geometrica)))
+probabilidades <- dgeom_custom(valores_unicos, theta_hat_geom)
+
+df_teorico <- data.frame(
+  x = valores_unicos,
+  y = probabilidades
+)
+
+# Gráfico comparativo
+ggplot() +
+  # Histograma de datos observados
+  geom_histogram(data = datos, aes(x = Geometrica, y = after_stat(density)), 
+                 bins = 30, color = "black", fill = "coral3", alpha = 0.7) +
+  # Línea y puntos de la distribución teórica
+  geom_line(data = df_teorico, aes(x = x, y = y), 
+            color = "blue", linewidth = 1) +
+  geom_point(data = df_teorico, aes(x = x, y = y), 
+             color = "blue", size = 2) +
+  annotate("text", x = max(valores_unicos) * 0.7, y = max(probabilidades) * 0.8, 
+           label = paste("θ =", round(theta_hat_geom, 3)), 
+           color = "blue", size = 5) +
+  labs(title = "Distribución Geométrica - Ajuste por Método de Momentos",
+       x = "Valores", y = "Densidad") +
+  theme_minimal()
+```
+
+##  f) Convergencia
+
+```{r}
+estimar_theta_geom <- function(x) {
+  1 / mean(x)
+}
+
+# Simulación de convergencia
+set.seed(123)
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+df_convergencia_geom <- data.frame()
+
+for (n in tamano) {
+  # Usamos bootstrap para simular diferentes tamaños de muestra
+  indices <- sample(1:nrow(datos), n * N, replace = TRUE)
+  muestras <- matrix(datos$Geometrica[indices], ncol = N)
+  
+  estimacion_n <- apply(muestras, 2, estimar_theta_geom)
+  df_temp <- data.frame(n = factor(n), Estimacion = estimacion_n)
+  df_convergencia_geom <- rbind(df_convergencia_geom, df_temp)
+}
+
+# Gráfico de convergencia
+ggplot(df_convergencia_geom) +
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7) +
+  geom_hline(yintercept = theta_hat_geom, color = "red", 
+             linetype = "dashed", linewidth = 1) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(title = "Convergencia del estimador - Distribución Geométrica",
+       x = "Tamaño de la muestra", y = "Estimación de θ") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+:::
+
+:::
+
+
+
+::: {#exr-discreta_2}
+
+Para $0 < \theta < 6/5$, consideramos la función de probabilidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\theta/2 & \text{si } x = -1, \\
+\theta/3 & \text{si } x = 0, \\
+1-5\theta/6 & \text{si } x = 1, \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+::: {.panel-tabset}
+
+## a) Estimador
+
+Encontramos el estimador para $\theta$ por el método de momentos.
+
+Primero calculamos la esperanza de la variable aleatoria $X$:
+
+\begin{equation}
+E(X) = \sum_x x f(x;\theta) = (-1)(\theta
+/2) + (0)(\theta/3) + (1)(1-5\theta/6) = 1 - \frac{4\theta}{3}
+\end{equation}
+
+Luego, igualamos la esperanza muestral a la esperanza teórica para encontrar el estimador por el método de momentos:
+
+\begin{equation}
+\overline{X} = 1 - \frac{4\hat\theta}{3} \implies \hat\theta = \frac{3(1 - \bar{X})}{4}
+\end{equation}
+
+## b) Insesgamiento 
+
+Verificamos si es insesgado y/o asintóticamente insesgado.
+
+\begin{equation}
+E(\hat\theta) = E\left(\frac{3(1 - \overline{X})}{4}\right) = \frac{3}{4}(1 - E(\overline{X})) = \frac{3}{4}(1 - E(X)) = \frac{3}{4}\left(1 - \left(1 - \frac{4\theta}{3}\right)\right) = \theta
+\end{equation}
+
+Luego, el estimador es insesgado y por lo tanto, asintóticamente insesgado.
+
+
+## c) Varianza 
+
+Calculamos la varianza del estimador.
+
+\begin{equation}
+Var(\hat\theta) = Var\left(\frac{3(1 - \overline{X})}{4}\right) = \left(\frac{3}{4}\right)^2 Var(1 - \overline{X}) = \left(\frac{3}{4}\right)^2 Var(\overline{X}) = \left(\frac{3}{4}\right)^2 \frac{Var(X)}{n}
+\end{equation}
+
+Para calcular $Var(X)$ utilizamos la igualdad $Var(X) = E(X^2) - [E(X)]^2$ y para ello, inicialmente calculamos $E(X^2)$:
+
+\begin{equation}
+E(X^2) = \sum_x x^2 f(x;\theta) = (-1)^2(\theta/2) + (0)^2(\theta/3) + (1)^2(1 - 5\theta/6) = \frac{\theta}{2} + 1 - \frac{5\theta}{6} = 1 - \frac{\theta}{3}
+\end{equation}
+
+Luego, calculamos la varianza de $X$:
+
+\begin{equation}
+Var(X) = E(X^2) - [E(X)]^2 = \left(1 - \frac{\theta}{3}\right) - \left(1 - \frac{4\theta}{3}\right)^2 = \frac{-\theta^2 + 6\theta}{9}
+\end{equation}  
+
+Finalmente, sustituimos $Var(X)$ en la expresión de $Var(\hat\theta)$:
+
+\begin{equation}
+Var(\hat\theta) = \left(\frac{3}{4}\right)^2 \frac{1}{n} \frac{-\theta^2 + 6\theta}{9} = \frac{-\theta^2 + 6\theta}{16n}
+\end{equation}
+
+## d) ECM
+
+Calculamos el error cuadrático medio (ECM).
+
+Dado que el estimador es insesgado, el ECM es igual a la varianza:
+
+\begin{equation}
+ECM(\hat\theta) = Var(\hat\theta) = \frac{-\theta^2 + 6\theta}{16n}
+\end{equation}
+
+## e) Simulación
+
+Elegimos el valor $\theta=1$ y simulamos una muestra aleatoria de tamaño $n=1000$. Calculamos el estimador, graficamos el histograma de los datos y lo comparamos con la función de probabilidad obtenida con el parámetro estimado. 
+
+
+```{r}
+# Parámetro fijo
+theta_fijo <- 1
+
+# Función de probabilidad 
+dexr <- function(x, theta){
+f_x <-ifelse(x == -1, theta/2, ifelse(x == 0, theta/3, ifelse(x == 1, 1 - 5*theta/6, 0)))
+return(f_x)
+}
+
+# Función para generar muestra aleatoria
+rexr <- function(n, theta){
+  X <- sample(c(-1, 0, 1), size = n, replace = TRUE, prob = c(theta/2, theta/3, 1 - 5*theta/6))
+  return(X)
+}
+
+# Función para estimar theta
+estimar_theta <- function(X){
+  theta_hat <- (3 * (1 - mean(X))) / 4
+  return(theta_hat)
+}
+
+
+df_exr <- data.frame(X = rexr(1000, theta_fijo), Tipo = "Teórico")
+
+theta_hat <- estimar_theta(df_exr$X)
+
+df_temp <- data.frame(X = rexr(1000, theta_hat), Tipo = "Estimados")
+
+df_exr <- rbind(df_exr, df_temp)
+
+ggplot(df_exr)+
+  geom_histogram(aes(x = X, y = after_stat(density), fill =Tipo), bins = 3, center = -1, color = "black", alpha = 0.7, position ="dodge")+
+  scale_fill_brewer(palette = "Set1")+
+  theme_bw()
+  
+
+
+
+
+
+```
+
+
+## f) Convergencia
+
+Verificamos la convergencia del estimador al aumentar el tamaño cada muestra. Graficamos los valores del estimador en función del tamaño de la muestra para $n = 10, 50, 100, 500, 1000$. Para cada $n$ se generan $N = 500$ valores.
+
+
+```{r}
+# Tamaños de muestra y número de réplicas
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+
+df_convergencia <- data.frame()
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr(n, theta_fijo)
+    estimar_theta(X)
+  })
+  df_temp <- data.frame(n = as.factor(n), Estimacion = estimacion_n)
+  df_convergencia <- rbind(df_convergencia, df_temp)
+}
+
+# Gráfico de convergencia
+
+ggplot(df_convergencia)+
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7)+
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1)+
+  scale_fill_brewer(palette = "Set1")+
+  labs(title = "Convergencia del estimador al aumentar el tamaño de la muestra",
+       x = "Tamaño de la muestra (n)",
+       y = "Estimación de θ")+
+  theme_bw()+
+  theme(legend.position = "none")
+
+```
+
+:::
+
+
+:::
+
+
+
+::: {#exr-discreta_3}
+
+Para $0 < \theta < 3/2$, consideramos la función de probabilidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\theta/3 & \text{si } x = 0, \\
+1-2\theta/3 & \text{si } x = 1, \\
+\theta/3 & \text{si } x = 2, \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+::: {.panel-tabset}
+
+##  a) Estimador
+
+Encontramos el estimador para $\theta$ por el método de momentos.
+
+Primero calculamos la esperanza de la variable aleatoria $X$:
+
+\begin{equation}
+E(X) = \sum_x x f(x;\theta) = (0)(\theta/3) + (1)(1-2\theta/3) + (2)(\theta/3) = 1 - \frac{2\theta}{3} + \frac{2\theta}{3} = 1
+\end{equation}
+
+**Nota:** La esperanza no depende de $\theta$, por lo que necesitamos usar el segundo momento.
+
+Calculamos $E(X^2)$:
+
+\begin{equation}
+E(X^2) = \sum_x x^2 f(x;\theta) = (0)^2(\theta/3) + (1)^2(1-2\theta/3) + (2)^2(\theta/3) = 1 - \frac{2\theta}{3} + \frac{4\theta}{3} = 1 + \frac{2\theta}{3}
+\end{equation}
+
+Igualamos el segundo momento muestral al segundo momento teórico:
+
+\begin{equation}
+\frac{1}{n}\sum_{i=1}^n X_i^2 = 1 + \frac{2\hat{\theta}}{3}
+\end{equation}
+
+Despejando $\hat{\theta}$:
+
+\begin{equation}
+\hat{\theta} = \frac{3}{2}\left(\frac{1}{n}\sum_{i=1}^n X_i^2 - 1\right)
+\end{equation}
+
+##  b) Insesgamiento
+
+Verificamos si es insesgado y/o asintóticamente insesgado.
+
+\begin{equation}
+E(\hat{\theta}) = E\left[\frac{3}{2}\left(\frac{1}{n}\sum_{i=1}^n X_i^2 - 1\right)\right] = \frac{3}{2}\left(E(X^2) - 1\right) = \frac{3}{2}\left(\left(1 + \frac{2\theta}{3}\right) - 1\right) = \theta
+\end{equation}
+
+Luego, el estimador es insesgado y por lo tanto, asintóticamente insesgado.
+
+##  c) Varianza
+
+Calculamos la varianza del estimador.
+
+\begin{equation}
+Var(\hat{\theta}) = Var\left[\frac{3}{2}\left(\frac{1}{n}\sum_{i=1}^n X_i^2 - 1\right)\right] = \left(\frac{3}{2}\right)^2 Var\left(\frac{1}{n}\sum_{i=1}^n X_i^2\right) = \frac{9}{4} \cdot \frac{Var(X^2)}{n}
+\end{equation}
+
+Calculamos $Var(X^2) = E(X^4) - [E(X^2)]^2$:
+
+Primero calculamos $E(X^4)$:
+
+\begin{equation}
+E(X^4) = \sum_x x^4 f(x;\theta) = (0)^4(\theta/3) + (1)^4(1-2\theta/3) + (2)^4(\theta/3) = 1 - \frac{2\theta}{3} + \frac{16\theta}{3} = 1 + \frac{14\theta}{3}
+\end{equation}
+
+Luego:
+
+\begin{equation}
+Var(X^2) = E(X^4) - [E(X^2)]^2 = \left(1 + \frac{14\theta}{3}\right) - \left(1 + \frac{2\theta}{3}\right)^2 = \frac{14\theta}{3} - \frac{4\theta^2}{9} - \frac{4\theta}{3} = \frac{10\theta}{3} - \frac{4\theta^2}{9}
+\end{equation}
+
+Finalmente:
+
+\begin{equation}
+Var(\hat{\theta}) = \frac{9}{4} \cdot \frac{1}{n} \left(\frac{10\theta}{3} - \frac{4\theta^2}{9}\right) = \frac{15\theta}{2n} - \frac{\theta^2}{n}
+\end{equation}
+
+##  d) ECM 
+
+Calculamos el error cuadrático medio (ECM).
+
+Dado que el estimador es insesgado, el ECM es igual a la varianza:
+
+\begin{equation}
+ECM(\hat{\theta}) = Var(\hat{\theta}) = \frac{15\theta}{2n} - \frac{\theta^2}{n}
+\end{equation}
+
+##  e) Simuluación
+
+```{r}
+# Parámetro fijo
+theta_fijo <- 1
+
+# Función de probabilidad 
+dexr3 <- function(x, theta){
+  f_x <- ifelse(x == 0, theta/3, 
+                ifelse(x == 1, 1 - 2*theta/3,
+                       ifelse(x == 2, theta/3, 0)))
+  return(f_x)
+}
+
+# Función para generar muestra aleatoria
+rexr3 <- function(n, theta){
+  X <- sample(c(0, 1, 2), size = n, replace = TRUE, 
+              prob = c(theta/3, 1 - 2*theta/3, theta/3))
+  return(X)
+}
+
+# Función para estimar theta
+estimar_theta_exr3 <- function(X){
+  segundo_momento <- mean(X^2)
+  theta_hat <- (3/2) * (segundo_momento - 1)
+  return(theta_hat)
+}
+
+# Generar muestra
+set.seed(123)
+muestra_exr3 <- rexr3(1000, theta_fijo)
+theta_hat_exr3 <- estimar_theta_exr3(muestra_exr3)
+
+cat("Valor real de θ:", theta_fijo, "\n")
+cat("Estimación de θ:", round(theta_hat_exr3, 4), "\n")
+
+# Preparar datos para gráfico
+df_observado <- data.frame(
+  x = factor(muestra_exr3),
+  Tipo = "Observado"
+)
+
+df_teorico <- data.frame(
+  x = factor(0:2),
+  Probabilidad = dexr3(0:2, theta_hat_exr3),
+  Tipo = "Teórico"
+)
+
+# Gráfico comparativo
+ggplot() +
+  geom_bar(data = df_observado, aes(x = x, y = after_stat(prop), group = 1, fill = "Observado"), 
+           alpha = 0.7, position = "dodge") +
+  geom_point(data = df_teorico, aes(x = x, y = Probabilidad, color = "Teórico"), 
+             size = 3) +
+  geom_line(data = df_teorico, aes(x = as.numeric(x), y = Probabilidad, color = "Teórico"), 
+            linewidth = 1) +
+  scale_fill_manual(name = "", values = c("Observado" = "coral3")) +
+  scale_color_manual(name = "", values = c("Teórico" = "blue")) +
+  labs(title = "Distribución Ejercicio 3 - Ajuste por Método de Momentos",
+       subtitle = paste("θ real =", theta_fijo, ", θ estimado =", round(theta_hat_exr3, 4)),
+       x = "Valores de X", y = "Probabilidad") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+##  f) Convergencia
+
+```{r}
+# Tamaños de muestra y número de réplicas
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+df_convergencia_exr3 <- data.frame()
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr3(n, theta_fijo)
+    estimar_theta_exr3(X)
+  })
+  df_temp <- data.frame(n = as.factor(n), Estimacion = estimacion_n)
+  df_convergencia_exr3 <- rbind(df_convergencia_exr3, df_temp)
+}
+
+# Gráfico de convergencia
+ggplot(df_convergencia_exr3) +
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7) +
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Convergencia del estimador - Ejercicio 3",
+       x = "Tamaño de la muestra (n)",
+       y = "Estimación de θ") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+:::
+
+:::
+
+
+
+::: {#exr-discreta_4}
+
+Para $\theta \in \mathbb{N}$, consideramos la función de probabilidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\frac{2x}{\theta(\theta+1)} & \text{si } x = 1, 2, \ldots, \theta, \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+
+::: {.panel-tabset}
+
+## a) Estimador
+
+Inicialmente calculamos la esperanza de $X$:
+
+\begin{eqnarray}
+E(X) & = & \sum_{x=1}^\theta x\, f(x;\theta)\\
+     & = & \frac{2}{\theta(\theta+1)}\sum_{x=1}^\theta x^2\\
+     & = & \frac{2\theta +1}{3}
+\end{eqnarray}
+
+Ahora, igualamos la esperanza con la media muestra y encontramos el estimador:
+
+\begin{equation}
+E(X) = \overline{X} \implies \frac{2\theta +1}{3} = \overline{X}
+\implies \hat{\theta} =\frac{3\bar{X}-1}{2}
+\end{equation}
+
+
+
+
+## b) Insesgamiento
+
+Verificamos si el estimador es insesgado y/o asintóticamente insesgado.
+
+\begin{eqnarray}
+E(\hat{\theta}) & = & E\left(\frac{3\overline{X}}{2}-\frac{1}{2} \right)\\
+                & = & \frac{3}{2}E(\overline{X})-\frac{1}{2}\\
+                & = & \frac{3}{2} \left(\frac{2\theta +1 }{3} \right) - \frac{1}{2}\\
+                & = & \theta
+\end{eqnarray}
+
+Luego, el estimador $\hat{\theta}$ es insesgado.
+
+## c) Varianza
+
+La varianza del estimador es:
+
+$$Var(\hat{\theta})= \frac{\theta^2 +\theta -2}{8n}$$
+
+## d) ECM
+
+Recordemos que el ECM está dado por:
+
+$$ECM(\hat{\theta})=Var(\hat{\theta})+[B(\hat{\theta})]^2.$$
+Dado que el estimador es insesgado tenemos $B(\hat{\theta})=0$, luego:
+
+$$ECM(\hat{\theta})= Var(\hat{\theta})=\frac{\theta^2 +\theta -2}{8n}$$
+
+## e) Simulación
+
+Elegimos el valor $\theta=6$ y simulamos una muestra aleatoria de tamaño $n=1000$. Calculamos el estimador, graficamos el histograma de los datos y lo comparamos con el histrograma de los datos simulados con el parámetro estimado. 
+
+
+```{r}
+# Parámetro fijo
+theta_fijo <- 6
+
+# Función de probabilidad 
+dexr <- function(x, theta){
+f_x <- 2*x/(theta*(theta +1))
+return(f_x)
+}
+
+# Función para generar muestra aleatoria
+rexr <- function(n, theta){
+  X <- sample(1:theta, size = n, replace = TRUE, prob = dexr(1:theta, theta))
+  return(X)
+}
+
+# Función para estimar theta
+estimar_theta <- function(X){
+  theta_hat <- (3*mean(X)-1)/2
+  #theta_hat <- round(theta_hat, 0)
+  return(theta_hat)
+}
+
+
+df_exr <- data.frame(X = rexr(1000, theta_fijo), Tipo = "Teórico")
+
+theta_hat <- estimar_theta(df_exr$X)
+cat("El valor del estimador es: ", round(theta_hat,4))
+
+
+df_temp <- data.frame(X = rexr(1000, theta_hat), Tipo = "Estimados")
+
+df_exr <- rbind(df_exr, df_temp)
+
+ggplot(df_exr)+
+  geom_histogram(aes(x = X, y = after_stat(density), fill =Tipo), bins = theta_fijo, center = 1, color = "black", alpha = 0.7, position ="dodge")+
+  scale_fill_brewer(palette = "Set2")+
+  scale_x_continuous(breaks = 1:theta_fijo)+
+  theme_bw()
+  
+
+
+
+
+
+```
+
+
+## f) Convergencia
+
+Verificamos la convergencia del estimador al aumentar el tamaño cada muestra. Graficamos los valores del estimador en función del tamaño de la muestra para $n = 10, 50, 100, 500, 1000$. Para cada $n$ se generan $N = 500$ valores.
+
+
+```{r}
+# Tamaños de muestra y número de réplicas
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+
+df_convergencia <- data.frame()
+
+
+# Intento para comparar varianza teórica con la muestral
+# estimaciones_n <- function(n, theta_fijo){
+#   X <- rexr(n, theta_fijo)
+#   theta_hat <- estimar_theta(X)
+#   varianza_teorica <- (theta_fijo^2+theta_fijo-2)/(8*n)
+#   varianza_muestral <- var(X)
+#   resultados <- list(theta_hat, varianza_teorica, varianza_muestral)
+#   return(resultados)
+# }
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr(n, theta_fijo)
+    estimar_theta(X)
+  })
+  df_temp <- data.frame(n = as.factor(n), Estimacion = estimacion_n)
+  df_convergencia <- rbind(df_convergencia, df_temp)
+}
+
+# Gráfico de convergencia
+
+ggplot(df_convergencia)+
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7)+
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1)+
+  scale_fill_brewer(palette = "Set1")+
+  labs(title = "Convergencia del estimador al aumentar el tamaño de la muestra",
+       x = "Tamaño de la muestra (n)",
+       y = "Estimación de θ")+
+  theme_bw()+
+  theme(legend.position = "none")
+
+```
+
+:::
+
+
+
+
+:::
+
+Para poder generar las muestras aleatorias de las distribuciones continuas de los siguientes ejercicios, es necesario enunciar el siguiente teorema:
+
+::: {#thm-inversion}
+
+Si $X$ es una variable aleatoria continua con función de distribución acumulada $F_X(x)$, entonces la variable aleatoria $U = F_X(X)$ tiene una distribución uniforme en el intervalo $(0,1)$. Además, si $U \sim unif(0,1)$, entonces la variable aleatoria $X = F_X^{-1}(U)$ tiene la misma distribución que $X$. 
+
+:::
+
+Para poder aplicar el teorema de inversión, es necesario encontrar la función de distribución acumulada y su inversa. Para que esto último sea posible, es necesario que la función de distribución acumulada sea estrictamente creciente.
+
+
+::: {#exr-continua_1}
+
+Para $\theta >0$, consideramos la función de densidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\frac{2x}{\theta^2} & \text{si } 0\leq x \leq \theta \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+
+::: {.panel-tabset}
+
+## a) Estimador
+
+Encontramos el estimador para $\theta$ por el método de momentos.
+
+Primero calculamos la esperanza de la variable aleatoria $X$:
+
+\begin{eqnarray}
+E(X) & = & \int_{-\infty}^{\infty} x f(x;\theta) dx \\
+     & = & \int_0^{\theta} x \frac{2x}{\theta^2} dx \\
+     & = & \frac{2}{\theta^2} \int_0^{\theta} x^2 dx \\
+     & = & \frac{2}{\theta^2} \left[\frac{x^3}{3}\right]_0^{\theta} \\
+     & = & \frac{2\theta}{3}
+\end{eqnarray}
+
+Ahora igualamos la esperanza muestral a la esperanza teórica para encontrar el estimador por el método de momentos:
+
+\begin{equation}
+\overline{X} = \frac{2\hat\theta}{3} \implies \hat\theta = \frac{3\overline{X}}{2}
+\end{equation}
+
+## b) Insesgamiento
+
+Verificamos si es insesgado y/o asintóticamente insesgado.
+
+\begin{equation}
+E(\hat\theta) = E\left(\frac{3\overline{X}}{2}\right) = \frac{3}{2}E(\overline{X}) = \frac{3}{2}E(X) = \frac{3}{2}\left(\frac{2\theta}{3}\right) = \theta
+\end{equation}
+
+Entonces, el estimador es insesgado y por lo tanto, asintóticamente insesgado.
+
+## c) Varianza
+
+Calculamos la varianza del estimador.
+
+\begin{equation}
+Var(\hat\theta) = Var\left(\frac{3\overline{X}}{2}\right) = \left(\frac{3}{2}\right)^2 Var(\overline{X}) = \left(\frac{3}{2}\right)^2 \frac{Var(X)}{n}
+\end{equation}
+
+Para calcular $Var(X)$ utilizamos la igualdad $Var(X) = E(X^2) - [E(X)]^2$ y para ello, inicialmente calculamos $E(X^2)$:
+
+\begin{eqnarray}
+E(X^2) & = & \int_{-\infty}^{\infty} x^2 f(x;\theta) dx \\
+       & = & \int_0^{\theta} x^2 \frac{2x}{\theta^2} dx \\
+       & = & \frac{2}{\theta^2} \int_0^{\theta} x^3 dx \\
+       & = & \frac{2}{\theta^2} \left[\frac{x^4}{4}\right]_0^{\theta} \\
+       & = & \frac{\theta^2}{2}
+\end{eqnarray}
+
+Luego, calculamos la varianza de $X$:
+
+\begin{equation}
+Var(X) = E(X^2) - [E(X)]^2 = \frac{\theta^2}{2} - \left(\frac{2\theta}{3}\right)^2 = \frac{\theta^2}{18}
+\end{equation}
+
+
+Finalmente, sustituimos $Var(X)$ en la expresión de $Var(\hat\theta)$:
+
+\begin{equation}
+Var(\hat\theta) = \left(\frac{3}{2}\right)^2 \frac{1}{n}\frac{\theta^2}{18} = \frac{\theta^2}{8n}
+\end{equation}
+
+## d) ECM
+
+Calculamos el error cuadrático medio (ECM).
+
+Dado que el estimador es insesgado, el ECM es igual a la varianza:
+
+\begin{equation}
+ECM(\hat\theta) = Var(\hat\theta) = \frac{\theta^2}{8n}
+\end{equation}
+
+
+## e) Simulación
+
+Se elige un valor de $\theta = 5$ y se simula una muestra aleatoria de tamaño $n=1000$. Calculamos el estimador, graficamos el histograma de los datos y lo comparamos con la función de densidad obtenida con el parámetro estimado.
+
+En este caso hay que calcular la función de distribución (CDF o probabilidad acumulada)
+
+\begin{eqnarray}
+F_X(x;\theta) & = & \int_{-\infty}^{x} f(t;\theta) dt \\
+              & = & \int_0^{x} \frac{2t}{\theta^2} dt \\
+              & = & \frac{2}{\theta^2} \left[\frac{t^2}{2}\right]_0^{x} \\
+              & = & \frac{x^2}{\theta^2}, \quad 0 \leq x \leq \theta
+\end{eqnarray}
+
+Observamos que $F_X(x;\theta)$ es estrictamente creciente en el intervalo $(0, \theta)$ y por lo tanto, podemos encontrar su inversa, igualando $U=F_X(x,\theta)$ donde $U \sim unif(0,1)$, tenemos
+
+\begin{equation}
+U = \frac{x^2}{\theta^2} \implies x = \theta \sqrt{U}
+\end{equation}
+
+Luego, la variable aleatoria $X=F_X^{-1}(U)=\theta \sqrt{U}$ tiene la misma distribución que $X$.
+
+
+```{r}
+#| fig-align: center
+
+# Parámetro fijo
+
+theta_fijo <- 5
+
+# Función de densidad
+dexr <- function(x, theta){
+  f_x <- ifelse(x >= 0 & x <= theta, (2*x)/(theta^2), 0)
+  return(f_x)
+}
+
+# Función para generar muestra aleatoria
+rexr <- function(n, theta){
+  U <- runif(n)
+  X <- theta * sqrt(U)
+  return(X)
+}
+
+
+# Función para estimar theta
+
+estimar_theta <- function(X){
+  theta_hat <- (3 * mean(X)) / 2
+  return(theta_hat)
+}
+
+
+df_exr <- data.frame(X = rexr(5000, theta_fijo))
+theta_hat <- estimar_theta(df_exr$X)
+
+
+ggplot(df_exr)+
+  geom_histogram(aes(x = X, y = after_stat(density)), binwidth =0.25, color = "black", fill = "coral3", alpha = 0.7, boundary=0)+
+  stat_function(fun = dexr, args = list(theta = theta_hat), color = "blue", linewidth = 1, xlim = c(0, theta_hat))+
+  annotate("text", x = 4, y = 0.15, label = paste("θ =", round(theta_hat,3)), color = "blue", size = 5)+
+  labs(title = "Histograma de datos y función de densidad estimada",
+       x = "Valores",
+       y = "Densidad")+
+  theme_minimal()
+
+
+
+
+
+```
+## f) Convergencia
+
+Verificamos la convergencia del estimador al aumentar el tamaño cada muestra. Graficamos los valores del estimador en función del tamaño de la muestra con $n= 10, 50, 100, 500, 100$. Para cada $n$ se generan $N=500$ valores
+
+
+
+```{r}
+#| fig-align: "center"
+
+# Tamaños de muestra y número de réplicas
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+df_convergencia <- data.frame()
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr(n, theta_fijo)
+    estimar_theta(X)
+  })
+  df_temp <- data.frame(n = factor(n), Estimacion = estimacion_n )
+  df_convergencia <- rbind(df_convergencia, df_temp)
+}
+
+# Gráfico de convergencia
+ggplot(df_convergencia)+
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7)+
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1)+
+  scale_fill_brewer(palette = "Set1")+
+  labs(title = "Convergencia del estimador al aumentar el tamaño de la muestra",
+       x = "Tamaño de la muestra (n)",
+       y = "Estimación de θ")+
+  theme_bw()+
+  theme(legend.position = "none")
+
+```
+
+
+
+:::
+
+
+:::
+
+
+
+::: {#exr-continua_2}
+
+Para $\theta \in \mathbb{R}$, consideramos la función de densidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+e^{-(x-\theta)} & \text{si } \theta \leq x < \infty \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+::: {.panel-tabset}
+
+##  a) Estimador
+
+Encontramos el estimador para $\theta$ por el método de momentos.
+
+Primero calculamos la esperanza de la variable aleatoria $X$:
+
+\begin{equation}
+E(X) = \int_{\theta}^{\infty} x e^{-(x-\theta)} dx
+\end{equation}
+
+Hacemos la sustitución $u = x - \theta$, entonces $x = u + \theta$ y $dx = du$:
+
+\begin{equation}
+E(X) = \int_{0}^{\infty} (u + \theta) e^{-u} du = \int_{0}^{\infty} u e^{-u} du + \theta \int_{0}^{\infty} e^{-u} du
+\end{equation}
+
+\begin{equation}
+E(X) = 1 + \theta
+\end{equation}
+
+Igualamos la esperanza muestral a la esperanza teórica:
+
+\begin{equation}
+\overline{X} = 1 + \hat{\theta}
+\end{equation}
+
+Despejando $\hat{\theta}$:
+
+\begin{equation}
+\hat{\theta} = \overline{X} - 1
+\end{equation}
+
+##  b) Insesgamiento
+
+Verificamos si es insesgado:
+
+\begin{equation}
+E(\hat{\theta}) = E(\overline{X} - 1) = E(\overline{X}) - 1 = E(X) - 1 = (1 + \theta) - 1 = \theta
+\end{equation}
+
+El estimador es insesgado.
+
+##  c) Varianza
+
+Calculamos la varianza del estimador:
+
+\begin{equation}
+Var(\hat{\theta}) = Var(\overline{X} - 1) = Var(\overline{X}) = \frac{Var(X)}{n}
+\end{equation}
+
+Calculamos $Var(X) = E(X^2) - [E(X)]^2$:
+
+\begin{equation}
+E(X^2) = \int_{\theta}^{\infty} x^2 e^{-(x-\theta)} dx
+\end{equation}
+
+Con la sustitución $u = x - \theta$:
+
+\begin{equation}
+E(X^2) = \int_{0}^{\infty} (u + \theta)^2 e^{-u} du = \int_{0}^{\infty} (u^2 + 2u\theta + \theta^2) e^{-u} du
+\end{equation}
+
+\begin{equation}
+E(X^2) = \int_{0}^{\infty} u^2 e^{-u} du + 2\theta \int_{0}^{\infty} u e^{-u} du + \theta^2 \int_{0}^{\infty} e^{-u} du
+\end{equation}
+
+\begin{equation}
+E(X^2) = 2 + 2\theta(1) + \theta^2(1) = \theta^2 + 2\theta + 2
+\end{equation}
+
+Luego:
+
+\begin{equation}
+Var(X) = E(X^2) - [E(X)]^2 = (\theta^2 + 2\theta + 2) - (1 + \theta)^2 = 1
+\end{equation}
+
+Finalmente:
+
+\begin{equation}
+Var(\hat{\theta}) = \frac{1}{n}
+\end{equation}
+
+##  d) ECM 
+
+Calculamos el error cuadrático medio:
+
+\begin{equation}
+ECM(\hat{\theta}) = Var(\hat{\theta}) + [Sesgo(\hat{\theta})]^2 = \frac{1}{n} + 0 = \frac{1}{n}
+\end{equation}
+
+##  e) Simuluación
+
+```{r}
+
+theta_fijo <- 2
+
+dexr6 <- function(x, theta){
+  ifelse(x >= theta, exp(-(x - theta)), 0)
+}
+
+rexr6 <- function(n, theta){
+  U <- runif(n)
+  theta - log(1 - U)
+}
+
+estimar_theta_exr6 <- function(X){
+  mean(X) - 1
+}
+
+set.seed(123)
+muestra_exr6 <- rexr6(1000, theta_fijo)
+theta_hat_exr6 <- estimar_theta_exr6(muestra_exr6)
+
+cat("Theta real:", theta_fijo, "\n")
+cat("Theta estimado:", round(theta_hat_exr6, 4), "\n")
+
+df_exr6 <- data.frame(X = muestra_exr6)
+
+ggplot(df_exr6) +
+  geom_histogram(aes(x = X, y = after_stat(density)), 
+                 bins = 30, color = "black", fill = "lightblue", alpha = 0.7) +
+  stat_function(fun = dexr6, args = list(theta = theta_hat_exr6), 
+                color = "red", linewidth = 1) +
+  geom_vline(xintercept = theta_fijo, color = "blue", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = theta_fijo + 1, y = 0.3, 
+           label = paste("θ =", theta_fijo), color = "blue", size = 5) +
+  annotate("text", x = theta_fijo + 1, y = 0.25, 
+           label = paste("θ_hat =", round(theta_hat_exr6, 3)), color = "red", size = 5) +
+  labs(title = "Ejercicio 6 - Ajuste por Método de Momentos",
+       x = "X", y = "Densidad") +
+  theme_minimal()
+```
+
+
+##  f) Convergencia
+
+```{r}
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+df_convergencia_exr6 <- data.frame()
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr6(n, theta_fijo)
+    estimar_theta_exr6(X)
+  })
+  df_temp <- data.frame(n = as.factor(n), Estimacion = estimacion_n)
+  df_convergencia_exr6 <- rbind(df_convergencia_exr6, df_temp)
+}
+
+# Calcular varianzas teóricas y muestrales
+var_teorica <- 1/tamano
+var_muestral <- df_convergencia_exr6 %>% 
+  group_by(n) %>% 
+  summarise(Var_muestral = var(Estimacion)) %>% 
+  pull(Var_muestral)
+
+df_var_comparacion <- data.frame(
+  n = factor(tamano),
+  Var_teorica = var_teorica,
+  Var_muestral = var_muestral
+)
+
+# Gráfico de convergencia del estimador
+p1 <- ggplot(df_convergencia_exr6) +
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7) +
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1) +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "Convergencia del Estimador - Ejercicio 6",
+       subtitle = "Distribución exponencial desplazada",
+       x = "Tamaño de la muestra (n)",
+       y = expression(hat(theta))) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+# Gráfico de comparación de varianzas
+p2 <- ggplot(df_var_comparacion) +
+  geom_point(aes(x = n, y = Var_teorica, color = "Teórica"), size = 3) +
+  geom_line(aes(x = as.numeric(n), y = Var_teorica, color = "Teórica"), group = 1, linewidth = 1) +
+  geom_point(aes(x = n, y = Var_muestral, color = "Muestral"), size = 3) +
+  geom_line(aes(x = as.numeric(n), y = Var_muestral, color = "Muestral"), group = 1, linewidth = 1) +
+  scale_color_manual(name = "Varianza", 
+                     values = c("Teórica" = "blue", "Muestral" = "red")) +
+  labs(title = "Comparación de Varianzas Teórica vs Muestral",
+       x = "Tamaño de la muestra (n)",
+       y = "Varianza") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Mostrar estadísticas de convergencia
+
+for (i in 1:length(tamano)) {
+  datos_n <- df_convergencia_exr6 %>% filter(n == tamano[i])
+  cat("n =", tamano[i], ":\n")
+  cat("  Media:", round(mean(datos_n$Estimacion), 4), "\n")
+  cat("  Sesgo:", round(mean(datos_n$Estimacion) - theta_fijo, 4), "\n")
+  cat("  Varianza muestral:", round(var(datos_n$Estimacion), 4), "\n")
+  cat("  Varianza teórica:", round(var_teorica[i], 4), "\n")
+  cat("  ECM:", round(mean((datos_n$Estimacion - theta_fijo)^2), 4), "\n\n")
+}
+
+# Mostrar ambos gráficos
+library(patchwork)
+p1 / p2
+```
+
+:::
+:::
+
+
+
+::: {#exr-continua_3}
+
+Para $\theta >0$, consideramos la función de densidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\theta x^{\theta-1} & \text{si } 0< x < 1 \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+::: {.panel-tabset}
+
+##  a) Estimador
+
+Encontramos el estimador para $\theta$ por el método de momentos.
+
+Primero calculamos la esperanza de la variable aleatoria $X$:
+
+\begin{equation}
+E(X) = \int_{0}^{1} x \cdot \theta x^{\theta-1} dx = \theta \int_{0}^{1} x^{\theta} dx = \theta \left[\frac{x^{\theta+1}}{\theta+1}\right]_0^1 = \frac{\theta}{\theta+1}
+\end{equation}
+
+Igualamos la esperanza muestral a la esperanza teórica:
+
+\begin{equation}
+\overline{X} = \frac{\hat{\theta}}{\hat{\theta} + 1}
+\end{equation}
+
+Despejando $\hat{\theta}$:
+
+\begin{equation}
+\overline{X}(\hat{\theta} + 1) = \hat{\theta} \implies \overline{X}\hat{\theta} + \overline{X} = \hat{\theta} \implies \overline{X} = \hat{\theta} - \overline{X}\hat{\theta} = \hat{\theta}(1 - \overline{X})
+\end{equation}
+
+\begin{equation}
+\hat{\theta} = \frac{\overline{X}}{1 - \overline{X}}
+\end{equation}
+
+##  b) Insesgamiento 
+
+Verificamos si es insesgado:
+
+\begin{equation}
+E(\hat{\theta}) = E\left(\frac{\overline{X}}{1 - \overline{X}}\right) \neq \frac{E(\overline{X})}{1 - E(\overline{X})} = \frac{\theta/(\theta+1)}{1 - \theta/(\theta+1)} = \theta
+\end{equation}
+
+Por la no linealidad de la función, el estimador es sesgado.
+
+##  c) Varianza
+
+La varianza del estimador es compleja debido a la forma no lineal:
+
+\begin{equation}
+Var(\hat{\theta}) = Var\left(\frac{\overline{X}}{1 - \overline{X}}\right)
+\end{equation}
+
+Podemos usar el método delta para una aproximación asintótica.
+
+##  d) ECM 
+
+El error cuadrático medio incluye tanto varianza como sesgo:
+
+\begin{equation}
+ECM(\hat{\theta}) = Var(\hat{\theta}) + [Sesgo(\hat{\theta})]^2
+\end{equation}
+
+##  e) Simuluación
+
+```{r}
+theta_fijo <- 2
+
+# Función de densidad
+dexr7 <- function(x, theta){
+  ifelse(x > 0 & x < 1, theta * x^(theta - 1), 0)
+}
+
+# Función para generar muestra aleatoria (método de inversión)
+rexr7 <- function(n, theta){
+  # Encontramos la CDF: F(x) = x^theta
+  # Invertimos: U = x^theta => x = U^(1/theta)
+  U <- runif(n)
+  X <- U^(1/theta)
+  return(X)
+}
+
+# Función para estimar theta
+estimar_theta_exr7 <- function(X){
+  x_bar <- mean(X)
+  theta_hat <- x_bar / (1 - x_bar)
+  return(theta_hat)
+}
+
+# Generar muestra
+set.seed(123)
+muestra_exr7 <- rexr7(1000, theta_fijo)
+theta_hat_exr7 <- estimar_theta_exr7(muestra_exr7)
+
+cat("Theta real:", theta_fijo, "\n")
+cat("Theta estimado:", round(theta_hat_exr7, 4), "\n")
+cat("Media muestral:", round(mean(muestra_exr7), 4), "\n")
+
+# Gráfico comparativo
+df_exr7 <- data.frame(X = muestra_exr7)
+
+ggplot(df_exr7) +
+  geom_histogram(aes(x = X, y = after_stat(density)), 
+                 bins = 30, color = "black", fill = "lightgreen", alpha = 0.7,
+                 boundary = 0) +
+  stat_function(fun = dexr7, args = list(theta = theta_hat_exr7), 
+                color = "red", linewidth = 1) +
+  stat_function(fun = dexr7, args = list(theta = theta_fijo), 
+                color = "blue", linetype = "dashed", linewidth = 1, alpha = 0.7) +
+  annotate("text", x = 0.7, y = 2, 
+           label = paste("θ real =", theta_fijo), color = "blue", size = 4) +
+  annotate("text", x = 0.7, y = 1.8, 
+           label = paste("θ estimado =", round(theta_hat_exr7, 3)), color = "red", size = 4) +
+  labs(title = "Ejercicio 7 - Distribución Beta(θ,1)",
+       subtitle = "Ajuste por Método de Momentos",
+       x = "X", y = "Densidad") +
+  theme_minimal()
+```
+
+##  f) Convergencia
+
+```{r}
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+df_convergencia_exr7 <- data.frame()
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr7(n, theta_fijo)
+    estimar_theta_exr7(X)
+  })
+  df_temp <- data.frame(n = factor(n), Estimacion = estimacion_n)
+  df_convergencia_exr7 <- rbind(df_convergencia_exr7, df_temp)
+}
+
+# Calcular estadísticas de convergencia
+estadisticas_convergencia <- df_convergencia_exr7 %>% 
+  group_by(n) %>% 
+  summarise(
+    Media = mean(Estimacion),
+    Sesgo = mean(Estimacion) - theta_fijo,
+    Varianza = var(Estimacion),
+    ECM = mean((Estimacion - theta_fijo)^2)
+  )
+
+# Gráfico de convergencia del estimador
+p1 <- ggplot(df_convergencia_exr7) +
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7) +
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Convergencia del Estimador - Ejercicio 7",
+       subtitle = "Distribución Beta(θ,1)",
+       x = "Tamaño de la muestra (n)",
+       y = expression(hat(theta))) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+# Gráfico de sesgo y ECM
+df_sesgo_ecm <- estadisticas_convergencia %>% 
+  select(n, Sesgo, ECM) %>% 
+  pivot_longer(cols = c(Sesgo, ECM), names_to = "Metrica", values_to = "Valor")
+
+p2 <- ggplot(df_sesgo_ecm) +
+  geom_point(aes(x = n, y = Valor, color = Metrica), size = 3) +
+  geom_line(aes(x = as.numeric(n), y = Valor, color = Metrica, group = Metrica), linewidth = 1) +
+  scale_color_manual(values = c("Sesgo" = "orange", "ECM" = "purple")) +
+  labs(title = "Evolución del Sesgo y ECM",
+       x = "Tamaño de la muestra (n)",
+       y = "Valor") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Mostrar estadísticas
+
+print(estadisticas_convergencia)
+
+# Mostrar ambos gráficos
+library(patchwork)
+p1 / p2
+```
+
+:::
+:::
+
+
+::: {#exr-continua_4}
+
+Para $\theta >0$, consideramos la función de densidad:
+
+\begin{equation}
+f(x;\theta) = \begin{cases}
+\frac{2(\theta-x)}{\theta^2} & \text{si } 0 < x < \theta \\
+0 & \text{en otro caso.}
+\end{cases}
+\end{equation}
+
+
+::: {.panel-tabset}
+
+## a) Estimador
+
+Encontramos el estimador para $\theta$ por el método de momentos.
+
+Primero calculamos la esperanza de la variable aleatoria $X$:
+
+\begin{eqnarray}
+E(X) & = & \int_0^\theta x f(x;\theta) dx\\
+     & = & \int_0^\theta x \frac{2(\theta -x)}{\theta^2} dx
+     & = & \frac{\theta}{3}
+\end{eqnarray}
+
+Ahora igualamos la esperanza muestral a la esperanza teórica para encontrar el estimador por el método de momentos:
+
+\begin{equation}
+\overline{X} = \frac{\hat\theta}{3} \implies \hat\theta = 3 \overline{X}
+\end{equation}
+
+## b) Insesgamiento
+
+Verificamos si es insesgado y/o asintóticamente insesgado.
+
+\begin{equation}
+E(\hat\theta) = E(3\overline{X}) = 3 E(\overline{X}) = 3 \frac{\theta}{3} = \theta
+\end{equation}
+
+Entonces, el estimador es insesgado y por lo tanto, asintóticamente insesgado.
+
+## c) Varianza
+
+Calculamos la varianza del estimador.
+
+\begin{equation}
+Var(\hat\theta) = Var(3\overline{X}) = 3^2 Var(\overline{X}) = 9\frac{Var(X)}{n}
+\end{equation}
+
+Para calcular $Var(X)$ utilizamos la igualdad $Var(X) = E(X^2) - [E(X)]^2$ y para ello, inicialmente calculamos $E(X^2)$:
+
+\begin{eqnarray}
+E(X^2) & = & \int_{-\infty}^{\infty} x^2 f(x;\theta) dx \\
+       & = & \int_0^{\theta} x^2 \frac{2(\theta-x)}{\theta^2} dx \\
+       & = & \frac{\theta^2}{6}
+\end{eqnarray}
+
+Luego, calculamos la varianza de $X$:
+
+\begin{equation}
+Var(X) = E(X^2) - [E(X)]^2 = \frac{\theta^2}{6} - \left(\frac{\theta}{3}\right)^2 = \frac{\theta^2}{18}
+\end{equation}
+
+
+Finalmente, sustituimos $Var(X)$ en la expresión de $Var(\hat\theta)$:
+
+\begin{equation}
+Var(\hat\theta) = 9\frac{Var(X)}{n}=\frac{\theta^2}{2n}
+\end{equation}
+
+## d) ECM
+
+Calculamos el error cuadrático medio (ECM).
+
+Dado que el estimador es insesgado, el ECM es igual a la varianza:
+
+\begin{equation}
+ECM(\hat\theta) = Var(\hat\theta) = \frac{\theta^2}{2n}
+\end{equation}
+
+
+## e) Simulación
+
+Se elige un valor de $\theta = 5$ y se simula una muestra aleatoria de tamaño $n=1000$. Calculamos el estimador, graficamos el histograma de los datos y lo comparamos con la función de densidad obtenida con el parámetro estimado.
+
+En este caso hay que calcular la función de distribución (CDF o probabilidad acumulada)
+
+\begin{eqnarray}
+F_X(x;\theta) & = & \int_{0}^{x} f(t;\theta) dt \\
+              & = & \int_0^{x}  \frac{\theta(\theta-t)}{\theta^2}dt \\
+              & = & \frac{2}x{\theta}-\frac{x^2}{\theta^2} 
+\end{eqnarray}
+
+Observamos que $F_X(x;\theta)$ es estrictamente creciente en el intervalo $(0, \theta)$ y por lo tanto, podemos encontrar su inversa, igualando $U=F_X(x,\theta)$ donde $U \sim unif(0,1)$, tenemos
+
+\begin{equation}
+U = \frac{2}x{\theta}-\frac{x^2}{\theta^2} \implies x = \theta -\theta \sqrt{1-U}
+\end{equation}
+
+Luego, la variable aleatoria $X=F_X^{-1}(U)=\theta -\theta \sqrt{1-U}$ tiene la misma distribución que $X$.
+
+
+```{r}
+#| fig-align: center
+
+# Parámetro fijo
+
+theta_fijo <- 5
+
+# Función de densidad
+dexr <- function(x, theta){
+  f_x <- 2*(theta -x)/theta^2
+  return(f_x)
+}
+
+# Función para generar muestra aleatoria
+rexr <- function(n, theta){
+  U <- runif(n)
+  X <- theta -theta * sqrt(1-U)
+  return(X)
+}
+
+
+# Función para estimar theta
+
+estimar_theta <- function(X){
+  theta_hat <- 3 * mean(X)
+  return(theta_hat)
+}
+
+
+df_exr <- data.frame(X = rexr(5000, theta_fijo))
+theta_hat <- estimar_theta(df_exr$X)
+
+
+ggplot(df_exr)+
+  geom_histogram(aes(x = X, y = after_stat(density)), binwidth =0.1, color = "black", fill = "coral3", alpha = 0.7, boundary=0)+
+  stat_function(fun = dexr, args = list(theta = theta_hat), color = "blue", linewidth = 1, xlim = c(0, theta_hat))+
+  annotate("text", x = 4, y = 0.15, label = paste("θ =", round(theta_hat,3)), color = "blue", size = 5)+
+  labs(title = "Histograma de datos y función de densidad estimada",
+       x = "Valores",
+       y = "Densidad")+
+  theme_minimal()
+
+
+
+
+
+```
+## f) Convergencia
+
+Verificamos la convergencia del estimador al aumentar el tamaño cada muestra. Graficamos los valores del estimador en función del tamaño de la muestra con $n= 10, 50, 100, 500, 100$. Para cada $n$ se generan $N=500$ valores
+
+
+
+```{r}
+#| fig-align: "center"
+
+# Tamaños de muestra y número de réplicas
+tamano <- c(10, 50, 100, 500, 1000)
+N <- 500
+
+# Data frame para almacenar los resultados
+df_convergencia <- data.frame()
+
+# Simulación y cálculo del estimador para cada tamaño de muestra
+for (n in tamano){
+  estimacion_n <- replicate(N, {
+    X <- rexr(n, theta_fijo)
+    estimar_theta(X)
+  })
+  df_temp <- data.frame(n = factor(n), Estimacion = estimacion_n )
+  df_convergencia <- rbind(df_convergencia, df_temp)
+}
+
+var_teorica <- theta_fijo^2/(2*tamano)
+
+var_comp <- df_convergencia |> group_by(n) |> 
+  summarise(Var_muestral = var(Estimacion))
+var_comp <- ungroup(var_comp)
+
+var_comp <- var_comp |> mutate(Var_teorica =var_teorica)
+
+
+# Gráfico de convergencia
+ggplot(df_convergencia)+
+  geom_boxplot(aes(x = n, y = Estimacion, fill = n), alpha = 0.7)+
+  geom_hline(yintercept = theta_fijo, color = "red", linetype = "dashed", linewidth = 1)+
+  scale_fill_brewer(palette = "Set1")+
+  labs(title = "Convergencia del estimador al aumentar el tamaño de la muestra",
+       x = "Tamaño de la muestra (n)",
+       y = "Estimación de θ")+
+  theme_bw()+
+  theme(legend.position = "none")
+
+
+
+```
+
+Tabla de comparación de varianzas:
+
+
+```{r}
+var_comp
+```
+
+
+:::
+
+
+:::
+
+
+Los siguientes ejercicios requieren el uso de los datos contenidos en el archivo `Tarea_6.xlsx`. 
+
+```{r}
+datos <- read_xlsx("./Tarea_6.xlsx")
+```
+
+
+
+
+
+::: {#exr-valores_1}
+
+Las observaciones de la columna `Geometrica` provienen de una distribución geométrica con parámetro $\theta$. Calcula la estimación de $\theta$ por el método de momentos, compara la distribución obtenida con el histograma de los datos y brinda tus conclusiones.
+
+::: {.panel-tabset}
+
+##  a) Estimador
+
+Para una distribución geométrica con función de probabilidad:
+
+$$f(x;\theta) = (1-\theta)^{x}\theta \quad \text{para } x = 0, 1, 2, \ldots$$
+
+La esperanza es:
+
+$$E(X) = \frac{1-\theta}{\theta}$$
+
+Igualando con la media muestral:
+
+$$\overline{X} = \frac{1-\hat{\theta}}{\hat{\theta}}$$
+
+Despejando $\hat{\theta}$:
+
+$$\hat{\theta} = \frac{1}{1 + \overline{X}}$$
+
+##  b) Insesgamiento 
+
+Calculamos la esperanza del estimador:
+
+$$E(\hat{\theta}) = E\left(\frac{1}{1 + \overline{X}}\right)$$
+
+Por la desigualdad de Jensen:
+
+$$E\left(\frac{1}{1 + \overline{X}}\right) \neq \frac{1}{1 + E(\overline{X})} = \frac{1}{1 + \frac{1-\theta}{\theta}} = \theta$$
+
+El estimador es sesgado.
+
+##  c) Varianza
+
+La varianza del estimador es compleja analíticamente:
+
+$$Var(\hat{\theta}) = Var\left(\frac{1}{1 + \overline{X}}\right)$$
+
+Para muestras grandes podemos usar aproximaciones asintóticas.
+
+##  d) ECM 
+
+El error cuadrático medio incluye varianza y sesgo:
+
+$$ECM(\hat{\theta}) = Var(\hat{\theta}) + [E(\hat{\theta}) - \theta]^2$$
+
+## e) Analisis con datos reales
+
+```{r}
+#| message: false
+#| warning: false
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readxl)
+
+# Cargar los datos
+datos <- read_xlsx("Tarea_6.xlsx")
+
+# Extraer la columna Geometrica
+x_geom <- datos$Geometrica
+
+# Calcular estadísticas descriptivas
+media_geom <- mean(x_geom)
+varianza_geom <- var(x_geom)
+n_geom <- length(x_geom)
+
+cat("Estadísticas descriptivas de los datos:\n")
+cat("======================================\n")
+cat("Tamaño de muestra (n):", n_geom, "\n")
+cat("Media muestral:", round(media_geom, 4), "\n")
+cat("Varianza muestral:", round(varianza_geom, 4), "\n")
+cat("Desviación estándar:", round(sd(x_geom), 4), "\n")
+
+# Estimación del parámetro por método de momentos
+theta_hat_geom <- 1 / (1 + media_geom)
+
+cat("\nEstimación del parámetro:\n")
+cat("==========================\n")
+cat("θ estimado:", round(theta_hat_geom, 4), "\n")
+
+# Función de probabilidad geométrica (para x = 0,1,2,...)
+dgeom_custom <- function(x, theta) {
+  theta * (1 - theta)^x
+}
+
+# Crear datos para comparación
+valores_posibles <- 0:max(x_geom)
+prob_teorica <- dgeom_custom(valores_posibles, theta_hat_geom)
+
+# Calcular frecuencias observadas
+frec_observada <- table(factor(x_geom, levels = valores_posibles)) / n_geom
+
+df_comparacion <- data.frame(
+  x = valores_posibles,
+  Observada = as.numeric(frec_observada),
+  Teorica = prob_teorica
+) %>%
+  pivot_longer(cols = c(Observada, Teorica), 
+               names_to = "Tipo", 
+               values_to = "Probabilidad")
+
+# Gráfico comparativo
+ggplot(df_comparacion, aes(x = x, y = Probabilidad, fill = Tipo)) +
+  geom_col(data = filter(df_comparacion, Tipo == "Observada"),
+           position = position_dodge(0.8), alpha = 0.7, width = 0.7) +
+  geom_point(data = filter(df_comparacion, Tipo == "Teorica"),
+             aes(color = Tipo), size = 2.5) +
+  geom_line(data = filter(df_comparacion, Tipo == "Teorica"),
+            aes(color = Tipo, group = Tipo), linewidth = 0.8) +
+  scale_fill_manual(values = c("Observada" = "#E69F00", "Teorica" = "#0072B2")) +
+  scale_color_manual(values = c("Teorica" = "#0072B2")) +
+  labs(title = "Distribución Geométrica - Ajuste por Método de Momentos",
+       subtitle = paste("θ estimado =", round(theta_hat_geom, 4), 
+                       "| Media muestral =", round(media_geom, 3)),
+       x = "Valor de X", 
+       y = "Probabilidad / Frecuencia Relativa",
+       fill = "Distribución") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(color = "gray40"))
+
+# Calcular medidas de bondad de ajuste
+frec_obs <- table(factor(x_geom, levels = valores_posibles))
+frec_esp <- prob_teorica * n_geom
+
+# Estadístico chi-cuadrado (solo para categorías con frecuencia esperada >= 5)
+categorias_validas <- frec_esp >= 5
+chi_cuadrado <- sum(((frec_obs[categorias_validas] - frec_esp[categorias_validas])^2) / frec_esp[categorias_validas])
+gl <- sum(categorias_validas) - 2  # grados de libertad
+
+cat("\nBondad de ajuste:\n")
+cat("=================\n")
+cat("Estadístico chi-cuadrado:", round(chi_cuadrado, 4), "\n")
+cat("Grados de libertad:", gl, "\n")
+cat("Categorías usadas:", sum(categorias_validas), "de", length(valores_posibles), "\n")
+```
+
+##  f) Convergencia y Validación
+
+```{r}
+#| message: false
+#| warning: false
+library(patchwork)
+
+# Función para estimar theta geométrico
+estimar_theta_geom <- function(x) {
+  1 / (1 + mean(x))
+}
+
+# Simulación de convergencia usando bootstrap
+tamano_muestral <- c(50, 100, 250, 500, 1000)
+N_sim <- 300
+
+df_convergencia <- data.frame()
+
+for (n in tamano_muestral) {
+  estimaciones <- replicate(N_sim, {
+    muestra_boot <- sample(x_geom, n, replace = TRUE)
+    estimar_theta_geom(muestra_boot)
+  })
+  
+  df_temp <- data.frame(
+    n = factor(n),
+    Estimacion = estimaciones
+  )
+  df_convergencia <- rbind(df_convergencia, df_temp)
+}
+
+# Calcular estadísticas de convergencia
+estadisticas <- df_convergencia %>%
+  group_by(n) %>%
+  summarise(
+    Media = mean(Estimacion),
+    Sesgo = mean(Estimacion) - theta_hat_geom,
+    Varianza = var(Estimacion),
+    ECM = mean((Estimacion - theta_hat_geom)^2),
+    .groups = 'drop'
+  )
+
+# Gráfico 1: Convergencia del estimador
+p1 <- ggplot(df_convergencia, aes(x = n, y = Estimacion, fill = n)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  geom_hline(yintercept = theta_hat_geom, color = "red", 
+             linetype = "dashed", linewidth = 1) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Convergencia del Estimador θ",
+       subtitle = "Distribución geométrica - Análisis por bootstrap",
+       x = "Tamaño de la muestra",
+       y = expression(hat(theta))) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+# Gráfico 2: Evolución del sesgo y ECM
+df_metricas <- estadisticas %>%
+  select(n, Sesgo, ECM) %>%
+  pivot_longer(cols = c(Sesgo, ECM), 
+               names_to = "Metrica", 
+               values_to = "Valor")
+
+p2 <- ggplot(df_metricas, aes(x = n, y = Valor, color = Metrica, group = Metrica)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(values = c("Sesgo" = "#D55E00", "ECM" = "#009E73")) +
+  labs(title = "Evolución del Sesgo y Error Cuadrático Medio",
+       x = "Tamaño de la muestra",
+       y = "Valor") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Mostrar resultados
+print(estadisticas)
+
+# Gráfico combinado
+p1 / p2
+
+# Simulación de datos con el parámetro estimado para validación
+set.seed(123)
+datos_simulados <- rgeom(1000, prob = theta_hat_geom)
+
+df_validacion <- data.frame(
+  x = 0:max(c(x_geom, datos_simulados)),
+  Original = as.numeric(table(factor(x_geom, levels = 0:max(c(x_geom, datos_simulados)))) / n_geom),
+  Simulados = as.numeric(table(factor(datos_simulados, levels = 0:max(c(x_geom, datos_simulados)))) / 1000)
+) %>%
+  pivot_longer(cols = c(Original, Simulados), 
+               names_to = "Tipo", 
+               values_to = "Probabilidad")
+
+ggplot(df_validacion, aes(x = x, y = Probabilidad, color = Tipo, linetype = Tipo)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.5) +
+  scale_color_manual(values = c("Original" = "#E69F00", "Simulados" = "#0072B2")) +
+  scale_linetype_manual(values = c("Original" = "solid", "Simulados" = "dashed")) +
+  labs(title = "Validación: Comparación Datos Originales vs Simulados",
+       subtitle = paste("Parámetro usado en simulación: θ =", round(theta_hat_geom, 4)),
+       x = "Valor de X",
+       y = "Probabilidad / Frecuencia Relativa") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+:::
+:::
+
+
+::: {#exr-valores_2}
+
+Las observaciones de la columna `Exp` provienen de una distribución exponencial con parámetro $\theta$. Calcula la estimación de $\theta$ por el método de momentos, compara la distribución obtenida con el histograma de los datos y brinda tus conclusiones.
+
+
+```{r}
+lambda_hat <- 1/mean(datos$Exp)
+lambda_hat
+
+ggplot(datos)+
+  geom_histogram(aes(Exp, y = after_stat(density)), bins = 50, color = "black", fill = "coral3", alpha = 0.7, boundary=0)+
+  stat_function(fun = dexp, args = list(rate = lambda_hat), color = "blue", linewidth = 1)+
+  annotate("text", x = 0.75, y = 2, label = paste("λ =", round(lambda_hat, 3)), color = "blue", size = 5)+
+  labs(title = "Histograma de datos y función de densidad estimada",
+       x = "Valores",
+       y = "Densidad")+
+  theme_minimal()
+
+
+```
+
+
+
+:::
+
+
+::: {#exr-valores_2}
+
+Las observaciones de la columna `Normal` provienen de una distribución normal con parámetros $\mu$ y $\sigma^2$. Calcula la estimación de $\mu$ y $\sigma^2$ por el método de momentos, compara la distribución obtenida con el histograma de los datos y brinda tus conclusiones.
+
+::: {.panel-tabset}
+
+## a) Estimador
+
+Para una distribución normal $N(\mu, \sigma^2)$, los primeros momentos son:
+
+- Primer momento: $E(X) = \mu$
+- Segundo momento: $E(X^2) = \sigma^2 + \mu^2$
+
+Los estimadores por método de momentos son:
+
+$$\hat{\mu} = \overline{X}$$
+$$\hat{\sigma}^2 = \frac{1}{n}\sum_{i=1}^n (X_i - \overline{X})^2$$
+
+## b) Insesgamiento
+
+Para $\hat{\mu}$:
+$$E(\hat{\mu}) = E(\overline{X}) = E(X) = \mu$$
+El estimador de $\mu$ es insesgado.
+
+Para $\hat{\sigma}^2$:
+$$E(\hat{\sigma}^2) = E\left[\frac{1}{n}\sum_{i=1}^n (X_i - \overline{X})^2\right] = \frac{n-1}{n}\sigma^2 \neq \sigma^2$$
+El estimador de $\sigma^2$ es sesgado.
+
+## c) Varianza
+
+Para $\hat{\mu}$:
+$$Var(\hat{\mu}) = Var(\overline{X}) = \frac{\sigma^2}{n}$$
+
+Para $\hat{\sigma}^2$:
+$$Var(\hat{\sigma}^2) = \frac{2\sigma^4}{n}$$
+
+## d) ECM
+
+Para $\hat{\mu}$ (insesgado):
+$$ECM(\hat{\mu}) = Var(\hat{\mu}) = \frac{\sigma^2}{n}$$
+
+Para $\hat{\sigma}^2$:
+$$ECM(\hat{\sigma}^2) = Var(\hat{\sigma}^2) + [Sesgo(\hat{\sigma}^2)]^2 = \frac{2\sigma^4}{n} + \left(\frac{\sigma^2}{n}\right)^2$$
+
+## e) Análisis con Datos Reales
+
+```{r}
+#| message: false
+#| warning: false
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+
+# Extraer la columna Normal
+x_norm <- datos$Normal
+
+# Calcular estadísticas descriptivas
+media_norm <- mean(x_norm)
+varianza_norm <- mean((x_norm - media_norm)^2)  # Método de momentos
+desv_norm <- sqrt(varianza_norm)
+n_norm <- length(x_norm)
+
+cat("Estadísticas descriptivas de los datos:\n")
+cat("Tamaño de muestra (n):", n_norm, "\n")
+cat("Media muestral (μ_hat):", round(media_norm, 4), "\n")
+cat("Varianza muestral (σ²_hat):", round(varianza_norm, 4), "\n")
+cat("Desviación estándar (σ_hat):", round(desv_norm, 4), "\n")
+cat("Mínimo:", round(min(x_norm), 4), "\n")
+cat("Máximo:", round(max(x_norm), 4), "\n")
+cat("Rango:", round(max(x_norm) - min(x_norm), 4), "\n")
+
+# Comparar con estimador insesgado de varianza
+varianza_insesgada <- var(x_norm)
+cat("\nComparación con estimador insesgado:\n")
+cat("Varianza insesgada:", round(varianza_insesgada, 4), "\n")
+cat("Diferencia:", round(varianza_insesgada - varianza_norm, 4), "\n")
+cat("Relación:", round(varianza_norm / varianza_insesgada, 4), "\n")
+
+# Función de densidad normal
+dnorm_custom <- function(x, mu, sigma) {
+  dnorm(x, mean = mu, sd = sigma)
+}
+
+# Crear datos para el gráfico
+x_range <- seq(min(x_norm), max(x_norm), length.out = 200)
+densidad_teorica <- dnorm_custom(x_range, media_norm, desv_norm)
+
+df_densidad <- data.frame(
+  x = x_range,
+  Densidad = densidad_teorica
+)
+
+# Gráfico comparativo
+p1 <- ggplot(data.frame(X = x_norm), aes(x = X)) +
+  geom_histogram(aes(y = after_stat(density)), 
+                 bins = 30, color = "black", fill = "lightblue", alpha = 0.7) +
+  geom_line(data = df_densidad, aes(x = x, y = Densidad), 
+            color = "red", linewidth = 1) +
+  geom_vline(xintercept = media_norm, color = "blue", 
+             linetype = "dashed", linewidth = 0.8) +
+  annotate("text", x = media_norm, y = max(densidad_teorica) * 0.9,
+           label = paste("μ =", round(media_norm, 3)), 
+           color = "blue", hjust = -0.1, size = 4) +
+  annotate("text", x = media_norm, y = max(densidad_teorica) * 0.8,
+           label = paste("σ =", round(desv_norm, 3)), 
+           color = "red", hjust = -0.1, size = 4) +
+  labs(title = "Distribución Normal - Ajuste por Método de Momentos",
+       subtitle = "Histograma de datos y densidad teórica",
+       x = "Valores", y = "Densidad") +
+  theme_minimal()
+
+# Gráfico Q-Q plot para normalidad
+p2 <- ggplot(data.frame(X = x_norm), aes(sample = X)) +
+  geom_qq(size = 1, alpha = 0.6) +
+  geom_qq_line(color = "red", linewidth = 1) +
+  labs(title = "Gráfico Q-Q para Normalidad",
+       subtitle = "Comparación con distribución normal teórica",
+       x = "Cuantiles teóricos", y = "Cuantiles muestrales") +
+  theme_minimal()
+
+# Mostrar ambos gráficos
+p1 / p2
+
+# Prueba de normalidad Shapiro-Wilk
+shapiro_test <- shapiro.test(x_norm)
+cat("\nPrueba de normalidad Shapiro-Wilk:\n")
+cat("Estadístico W:", round(shapiro_test$statistic, 4), "\n")
+cat("Valor p:", format.pval(shapiro_test$p.value, digits = 4), "\n")
+if(shapiro_test$p.value < 0.05) {
+  cat("Conclusión: Se rechaza la normalidad (p < 0.05)\n")
+} else {
+  cat("Conclusión: No se rechaza la normalidad (p >= 0.05)\n")
+}
+```
+
+##  f) Convergencia y Validación
+
+```{r}
+#| message: false
+#| warning: false
+# Función para estimar parámetros normales por método de momentos
+estimar_normal_mm <- function(x) {
+  mu_hat <- mean(x)
+  sigma2_hat <- mean((x - mu_hat)^2)
+  return(c(mu_hat, sigma2_hat))
+}
+
+# Simulación de convergencia usando bootstrap
+tamano_muestral <- c(50, 100, 250, 500, 1000)
+N_sim <- 300
+
+df_convergencia_mu <- data.frame()
+df_convergencia_sigma2 <- data.frame()
+
+for (n in tamano_muestral) {
+  estimaciones_mu <- numeric(N_sim)
+  estimaciones_sigma2 <- numeric(N_sim)
+  
+  for (i in 1:N_sim) {
+    muestra_boot <- sample(x_norm, n, replace = TRUE)
+    estimaciones <- estimar_normal_mm(muestra_boot)
+    estimaciones_mu[i] <- estimaciones[1]
+    estimaciones_sigma2[i] <- estimaciones[2]
+  }
+  
+  df_convergencia_mu <- rbind(df_convergencia_mu,
+                             data.frame(n = factor(n), 
+                                       Parametro = "μ", 
+                                       Estimacion = estimaciones_mu))
+  
+  df_convergencia_sigma2 <- rbind(df_convergencia_sigma2,
+                                 data.frame(n = factor(n), 
+                                           Parametro = "σ²", 
+                                           Estimacion = estimaciones_sigma2))
+}
+
+# Combinar datos
+df_convergencia <- rbind(df_convergencia_mu, df_convergencia_sigma2)
+
+# Calcular estadísticas de convergencia
+estadisticas <- df_convergencia %>%
+  group_by(n, Parametro) %>%
+  summarise(
+    Media = mean(Estimacion),
+    Sesgo = mean(Estimacion) - ifelse(Parametro == "μ", media_norm, varianza_norm),
+    Varianza = var(Estimacion),
+    ECM = mean((Estimacion - ifelse(Parametro == "μ", media_norm, varianza_norm))^2),
+    .groups = 'drop'
+  )
+
+# Gráfico de convergencia
+p_conv <- ggplot(df_convergencia, aes(x = n, y = Estimacion, fill = n)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  facet_wrap(~ Parametro, scales = "free_y") +
+  geom_hline(data = data.frame(Parametro = c("μ", "σ²"), 
+                               Valor = c(media_norm, varianza_norm)),
+             aes(yintercept = Valor), color = "red", 
+             linetype = "dashed", linewidth = 1) +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "Convergencia de los Estimadores - Distribución Normal",
+       subtitle = "Método de momentos - Análisis por bootstrap",
+       x = "Tamaño de la muestra",
+       y = "Estimación") +
+  theme_bw() +
+  theme(legend.position = "none",
+        strip.text = element_text(face = "bold"))
+
+# Gráfico de evolución del ECM
+p_ecm <- ggplot(estadisticas, aes(x = n, y = ECM, color = Parametro, group = Parametro)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  scale_color_manual(values = c("μ" = "#0072B2", "σ²" = "#D55E00")) +
+  labs(title = "Evolución del Error Cuadrático Medio",
+       x = "Tamaño de la muestra",
+       y = "ECM") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Mostrar resultados
+print(estadisticas)
+
+# Mostrar gráficos
+p_conv / p_ecm
+
+# Validación mediante simulación
+set.seed(123)
+datos_simulados <- rnorm(1000, mean = media_norm, sd = desv_norm)
+
+df_validacion <- data.frame(
+  Tipo = rep(c("Original", "Simulado"), each = 1000),
+  Valor = c(x_norm, datos_simulados)
+)
+
+ggplot(df_validacion, aes(x = Valor, fill = Tipo)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Original" = "#E69F00", "Simulado" = "#0072B2")) +
+  labs(title = "Validación: Comparación Datos Originales vs Simulados",
+       subtitle = paste("Parámetros: μ =", round(media_norm, 3), 
+                       ", σ =", round(desv_norm, 3)),
+       x = "Valores",
+       y = "Densidad") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Comparación de estadísticas entre original y simulado
+cat("\nComparación datos originales vs simulados:\n")
+cat("Original - Media:", round(mean(x_norm), 4), 
+    "| Simulado - Media:", round(mean(datos_simulados), 4), "\n")
+cat("Original - Desv. Est.:", round(sd(x_norm), 4), 
+    "| Simulado - Desv. Est.:", round(sd(datos_simulados), 4), "\n")
+```
+
+:::
+
+
+::: {#exr-valores_3}
+
+Las observaciones de la columna `Gamma` provienen de una distribución gamma con parámetros $\gamma$ y $\lambda$. Calcula la estimación de $\gamma$ y $\lambda$ por el método de momentos, compara la distribución obtenida con el histograma de los datos y brinda tus conclusiones.
+
+Los estimadores por el métodos de momentos para los parámetros de una variable aleatoria continua $X\sim gamma(\gamma, \lambda)$ son:
+
+\begin{eqnarray}
+\hat{\gamma} & = & \frac{m_1^2}{m_2-m_1^2}\\
+\hat{\lambda} & = & \frac{m_1}{m_2-m_1^2}
+\end{eqnarray}
+
+Donde $m_1$ y $m_2$ son los respectivos momentos muestrales. Encontramos los valores estimados:
+
+```{r}
+gamma_hat <- mean(datos$Gamma)^2/(mean(datos$Gamma^2)-mean(datos$Gamma)^2)
+
+lambda_hat <- mean(datos$Gamma)/(mean(datos$Gamma^2)-mean(datos$Gamma)^2)
+```
+
+* $\hat{\gamma} = `r round(gamma_hat,4)`$
+
+
+* $\hat{\lambda} = `r round(lambda_hat,4)`$
+
+Graficamos el histograma de los datos proporcionados y la función de densidad con los valores estimados.
+
+
+```{r}
+ggplot(datos)+
+  geom_histogram(aes(x = Gamma, y =after_stat(density)), color ="black", fill ="deeppink3", alpha = 0.7)+
+  stat_function(fun = dgamma, args = list(shape = gamma_hat,  rate = lambda_hat), color = "blue", linewidth = 1)+
+  theme_bw()
+  
+  
+  
+  
+```
+
+:::
+
